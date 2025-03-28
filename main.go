@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -11,6 +12,13 @@ import (
 )
 
 func main() {
+
+	// Check for the "help" command-line argument.
+	if len(os.Args) > 1 && os.Args[1] == "help" {
+		fmt.Println(config.HelpText)
+		os.Exit(0)
+	}
+
 	// Create a cancellable context to manage the lifetime of operations.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
