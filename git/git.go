@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"time"
 
 	"github.com/NishantBansal2003/LND-Fuzz/config"
@@ -12,6 +13,26 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
+// sanitizeURL parses the given raw URL string and returns a sanitized version
+// in which any user credentials (e.g., a GitHub Personal Access Token) are
+// replaced with a placeholder ("*****"). This ensures that sensitive
+// information is not exposed in logs or output. If the URL cannot be parsed,
+// the original URL is returned.
+func sanitizeURL(rawURL string) string {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		// If URL parsing fails, return the original URL.
+		return rawURL
+	}
+
+	// Remove user info (username and password) if present.
+	if parsed.User != nil {
+		parsed.User = url.User("*****")
+	}
+
+	return parsed.String()
+}
+
 // CloneRepositories clones the project and storage repositories based on the
 // provided configuration. It clones the project repository into
 // config.ProjectDir and the storage repository into config.CorpusDir, logging
@@ -19,7 +40,8 @@ import (
 func CloneRepositories(ctx context.Context, logger *slog.Logger,
 	cfg *config.Config) error {
 
-	logger.Info("Cloning project repository", "url", cfg.ProjectSrcPath)
+	logger.Info("Cloning project repository", "url",
+		sanitizeURL(cfg.ProjectSrcPath))
 	if _, err := git.PlainCloneContext(ctx, config.ProjectDir, false,
 		&git.CloneOptions{
 			URL: cfg.ProjectSrcPath,
@@ -27,7 +49,8 @@ func CloneRepositories(ctx context.Context, logger *slog.Logger,
 		return fmt.Errorf("project clone failed: %w", err)
 	}
 
-	logger.Info("Cloning storage repository", "url", cfg.GitStorageRepo)
+	logger.Info("Cloning storage repository", "url",
+		sanitizeURL(cfg.GitStorageRepo))
 	if _, err := git.PlainCloneContext(ctx, config.CorpusDir, false,
 		&git.CloneOptions{
 			URL: cfg.GitStorageRepo,
