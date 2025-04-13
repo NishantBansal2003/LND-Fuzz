@@ -24,7 +24,7 @@ func RunFuzzing(ctx context.Context, logger *slog.Logger,
 	for _, pkg := range cfg.FuzzPkgs {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil
 		default:
 			targets, err := listFuzzTargets(ctx, logger, pkg)
 			if err != nil {
@@ -128,7 +128,7 @@ func executeFuzzTarget(ctx context.Context, logger *slog.Logger, pkg string,
 
 	wg.Wait()
 
-	if err := cmd.Wait(); err != nil {
+	if err := cmd.Wait(); err != nil && ctx.Err() == nil {
 		return fmt.Errorf("fuzz execution failed: %w", err)
 	}
 

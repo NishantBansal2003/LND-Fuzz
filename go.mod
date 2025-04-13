@@ -2,7 +2,11 @@ module github.com/NishantBansal2003/LND-Fuzz
 
 go 1.24.0
 
-require github.com/go-git/go-git/v5 v5.14.0
+require (
+	github.com/go-git/go-git/v5 v5.14.0
+	github.com/joho/godotenv v1.5.1
+	golang.org/x/sync v0.12.0
+)
 
 require (
 	dario.cat/mergo v1.0.0 // indirect
@@ -22,7 +26,6 @@ require (
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	golang.org/x/crypto v0.35.0 // indirect
 	golang.org/x/net v0.35.0 // indirect
-	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )

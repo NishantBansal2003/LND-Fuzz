@@ -3,29 +3,138 @@ package main
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
+	"log/slog"
+
+	"github.com/NishantBansal2003/LND-Fuzz/app"
 	"github.com/NishantBansal2003/LND-Fuzz/config"
-	"github.com/NishantBansal2003/LND-Fuzz/fuzz"
 	"github.com/NishantBansal2003/LND-Fuzz/git"
 )
 
-func main() {
+// runFuzzingCycles starts a continuous loop that triggers fuzzing work for a
+// specified duration. It creates a sub-context for each cycle and performs
+// cleanup after each cycle before starting a new one. The cycles run
+// indefinitely until the parent context is canceled.
+func runFuzzingCycles(ctx context.Context, logger *slog.Logger, cfg *config.
+	Config, cycleDuration time.Duration) {
 
-	// Check for the "help" command-line argument.
+	for {
+		// Check if the overall application context has been canceled.
+		select {
+		case <-ctx.Done():
+			logger.Info("Shutdown requested; exiting fuzzing " +
+				"cycles.")
+			return
+		default:
+			// Continue with the current cycle.
+		}
+
+		// Create a sub-context for the current fuzzing cycle.
+		cycleCtx, cancelCycle := context.WithCancel(ctx)
+
+		// Start the fuzzing worker concurrently.
+		go runFuzzingWorker(cycleCtx, logger, cfg)
+
+		// Wait for either the cycle duration to elapse or the overall
+		// context to cancel.
+		select {
+		case <-time.After(cycleDuration):
+			logger.Info("Cycle duration complete; initiating " +
+				"cleanup.")
+			// Cancel the current cycle.
+			cancelCycle()
+			// Give a buffer time for routines to exit gracefully.
+			time.Sleep(5 * time.Second)
+			performCleanup(logger)
+		case <-ctx.Done():
+			// Overall application context canceled.
+			cancelCycle()
+			logger.Info("Shutdown initiated during fuzzing " +
+				"cycle; performing final cleanup.")
+			// Buffer time before cleanup.
+			time.Sleep(5 * time.Second)
+			performCleanup(logger)
+			return
+		}
+	}
+}
+
+// runFuzzingWorker continuously executes the fuzzing work until the cycle
+// context is canceled. It repeatedly calls the main fuzzing function from the
+// app package.
+func runFuzzingWorker(ctx context.Context, logger *slog.Logger, cfg *config.
+	Config) {
+
+	logger.Info("Starting fuzzing worker", "startTime", time.Now().
+		Format(time.RFC1123))
+
+	// Continuously invoke the main fuzzing operation.
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Info("Fuzzing worker cycle canceled.")
+			return
+		default:
+			// Execute the main fuzzing operation.
+			app.Main(ctx, logger, cfg)
+		}
+	}
+}
+
+// performCleanup handles post-cycle cleanup of the workspace and commits/pushes
+// the results. If committing or pushing fails, it logs the error and terminates
+// the program.
+//
+// Note: cleanupWorkspace is deferred within this function.
+func performCleanup(logger *slog.Logger) {
+	// Ensure that workspace cleanup is performed even if
+	// CommitAndPushResults fails.
+	defer config.CleanupWorkspace(logger)
+
+	// Commit and push results; if an error occurs, log it and exit.
+	if err := git.CommitAndPushResults(logger); err != nil {
+		logger.Error("Failed to commit/push results", "error", err)
+		os.Exit(1)
+	}
+}
+
+// main is the entry point of the application. It sets up signal handling for
+// graceful shutdown, loads configuration, and starts the continuous fuzzing
+// cycles.
+func main() {
+	// Display help text if "help" argument is provided.
 	if len(os.Args) > 1 && os.Args[1] == "help" {
 		fmt.Println(config.HelpText)
 		os.Exit(0)
 	}
 
-	// Create a cancellable context to manage the lifetime of operations.
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	// Create a cancellable context to manage the application's lifecycle.
+	appCtx, cancelApp := context.WithCancel(context.Background())
+	defer cancelApp()
 
-	// Initialize a structured logger that outputs logs in text format to
-	// stdout.
+	// Set up signal handling for graceful shutdown on SIGINT and SIGTERM.
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		fmt.Println("Received interrupt signal; shutting down " +
+			"gracefully...")
+		cancelApp()
+	}()
+
+	// Initialize a structured logger that outputs logs in text format.
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+	// Load environment variables from a .env file.
+	if err := config.LoadEnv(); err != nil {
+		logger.Error("Failed to load environment variables", "error",
+			err)
+		os.Exit(1)
+	}
 
 	// Load configuration settings from environment variables.
 	cfg, err := config.LoadConfig()
@@ -33,26 +142,17 @@ func main() {
 		logger.Error("Failed to load configuration", "error", err)
 		os.Exit(1)
 	}
-	// Ensure that the workspace is cleaned up after execution.
-	defer config.CleanupWorkspace(logger)
 
-	// Clone the project and storage repositories based on the loaded
-	// configuration.
-	if err := git.CloneRepositories(ctx, logger, cfg); err != nil {
-		logger.Error("Repository cloning failed", "error", err)
+	// Parse the fuzzing cycle duration from configuration (e.g., "20s").
+	cycleDuration, err := time.ParseDuration(cfg.FuzzTime)
+	if err != nil {
+		logger.Error("Error parsing cycle duration", "durationString",
+			cfg.FuzzTime, "error", err)
 		os.Exit(1)
 	}
 
-	// Execute fuzz testing on the specified packages.
-	if err := fuzz.RunFuzzing(ctx, logger, cfg); err != nil {
-		logger.Error("Fuzzing process failed", "error", err)
-		os.Exit(1)
-	}
+	// Start the continuous fuzzing cycles.
+	runFuzzingCycles(appCtx, logger, cfg, cycleDuration)
 
-	// Commit any changes in the corpus repository and push the commit to
-	// the remote repository.
-	if err := git.CommitAndPushResults(logger); err != nil {
-		logger.Error("Failed to commit/push results", "error", err)
-		os.Exit(1)
-	}
+	fmt.Println("Program exited.")
 }

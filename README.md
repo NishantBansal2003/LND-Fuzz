@@ -11,7 +11,7 @@ LND-Fuzz is a Go native fuzzing tool that automatically detects and runs fuzz ta
 
 ## Environment Variables
 
-Configure LND-Fuzz by setting the following environment variables:
+Configure LND-Fuzz by setting the following environment variables in `.env` file:
 
 - **FUZZ_NUM_PROCESSES**  
   Specifies the number of fuzzing processes to run concurrently.  
@@ -32,13 +32,13 @@ Configure LND-Fuzz by setting the following environment variables:
   The duration (in seconds) for which the fuzzing engine should run.  
   _Default_: 120 Seconds.
 
-- **FUZZPKG** (_Required_)  
+- **FUZZ_PKG** (_Required_)
   The specific Go package within the repository that will be fuzzed.
 
 ## How It Works
 
 1. **Configuration:**  
-   Set the required environment variables to configure the fuzzing process.
+   Set the required environment variables in `.env` file to configure the fuzzing process.
 
 2. **Fuzz Target Detection:**  
    The tool automatically detects all available fuzz targets in the provided project repository.
@@ -59,14 +59,14 @@ Configure LND-Fuzz by setting the following environment variables:
    ```
 
 2. **Set Environment Variables:**  
-   You can export the necessary environment variables in your shell:
+   You can export the necessary environment variables in `.env` file:
 
    ```bash
    export FUZZ_NUM_PROCESSES=<number_of_processes>
    export PROJECT_SRC_PATH=<project_repo_url>
    export GIT_STORAGE_REPO=<storage_repo_url>
    export FUZZ_TIME=<time_in_seconds>
-   export FUZZPKG=<target_package>
+   export FUZZ_PKG=<target_package>
    ```
 
 3. **Run the Fuzzing Engine:**  
