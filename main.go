@@ -10,9 +10,9 @@ import (
 
 	"log/slog"
 
-	"github.com/NishantBansal2003/LND-Fuzz/app"
 	"github.com/NishantBansal2003/LND-Fuzz/config"
 	"github.com/NishantBansal2003/LND-Fuzz/git"
+	"github.com/NishantBansal2003/LND-Fuzz/worker"
 )
 
 // runFuzzingCycles starts a continuous loop that triggers fuzzing work for a
@@ -80,7 +80,7 @@ func runFuzzingWorker(ctx context.Context, logger *slog.Logger, cfg *config.
 			return
 		default:
 			// Execute the main fuzzing operation.
-			app.Main(ctx, logger, cfg)
+			worker.Main(ctx, logger, cfg)
 		}
 	}
 }

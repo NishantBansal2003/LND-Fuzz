@@ -74,3 +74,9 @@ Configure LND-Fuzz by setting the following environment variables in `.env` file
    ```bash
    go run main.go
    ```
+
+## Deployment & Execution
+
+LND-Fuzz is designed with built-in coordination logic, eliminating the need for external CI frameworks like Jenkins or Buildbot. It can be deployed as a long-running service on any cloud instance (e.g., AWS EC2, GCP Compute Engine, or DigitalOcean Droplet). Once initiated, the application autonomously manages its execution cycles, running continuously and restarting the fuzzing process at intervals defined by the `FUZZ_TIME` environment variable.
+
+This self-sufficient design simplifies deployment and ensures consistent fuzz testing without manual intervention.
