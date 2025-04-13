@@ -63,25 +63,22 @@ func runFuzzingCycles(ctx context.Context, logger *slog.Logger, cfg *config.
 	}
 }
 
-// runFuzzingWorker continuously executes the fuzzing work until the cycle
-// context is canceled. It repeatedly calls the main fuzzing function from the
-// app package.
+// runFuzzingWorker executes the fuzzing work until the cycle context is
+// canceled. It repeatedly calls the main fuzzing function from the app package.
 func runFuzzingWorker(ctx context.Context, logger *slog.Logger, cfg *config.
 	Config) {
 
 	logger.Info("Starting fuzzing worker", "startTime", time.Now().
 		Format(time.RFC1123))
 
-	// Continuously invoke the main fuzzing operation.
-	for {
-		select {
-		case <-ctx.Done():
-			logger.Info("Fuzzing worker cycle canceled.")
-			return
-		default:
-			// Execute the main fuzzing operation.
-			worker.Main(ctx, logger, cfg)
-		}
+	// Invoke the main fuzzing operation.
+	select {
+	case <-ctx.Done():
+		logger.Info("Fuzzing worker cycle canceled.")
+		return
+	default:
+		// Execute the main fuzzing operation.
+		worker.Main(ctx, logger, cfg)
 	}
 }
 
