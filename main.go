@@ -113,18 +113,18 @@ func main() {
 	appCtx, cancelApp := context.WithCancel(context.Background())
 	defer cancelApp()
 
+	// Initialize a structured logger that outputs logs in text format.
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
 	// Set up signal handling for graceful shutdown on SIGINT and SIGTERM.
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigChan
-		fmt.Println("Received interrupt signal; shutting down " +
+		logger.Info("Received interrupt signal; shutting down " +
 			"gracefully...")
 		cancelApp()
 	}()
-
-	// Initialize a structured logger that outputs logs in text format.
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	// Load environment variables from a .env file.
 	if err := config.LoadEnv(); err != nil {
@@ -151,5 +151,5 @@ func main() {
 	// Start the continuous fuzzing cycles.
 	runFuzzingCycles(appCtx, logger, cfg, cycleDuration)
 
-	fmt.Println("Program exited.")
+	logger.Info("Program exited.")
 }
