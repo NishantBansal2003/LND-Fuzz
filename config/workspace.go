@@ -30,7 +30,7 @@ Environment Variables:
           Duration (in seconds) for which the fuzzing engine should run.
           Default: 120 seconds.
 
-  FUZZPKG   (Required)
+  FUZZ_PKG   (Required)
           The specific Go package within the repository to be fuzzed.
 
 Usage Example:

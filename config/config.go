@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 const (
@@ -42,6 +44,17 @@ type Config struct {
 	FuzzPkgs       []string
 	FuzzTime       string
 	NumProcesses   int
+}
+
+// LoadEnv loads environment variables from a .env file in the current
+// directory. It should be called before accessing any environment variables in
+// the application. If the file is not found or fails to load, the application
+// will return the error.
+func LoadEnv() error {
+	if err := godotenv.Load(); err != nil {
+		return fmt.Errorf("Failed to load .env file: %v", err)
+	}
+	return nil
 }
 
 // calculateProcessCount determines the number of processes to use based on the
@@ -95,9 +108,9 @@ func LoadConfig() (*Config, error) {
 
 	cfg.NumProcesses = calculateProcessCount()
 
-	fuzzPkgs := os.Getenv("FUZZPKG")
+	fuzzPkgs := os.Getenv("FUZZ_PKG")
 	if fuzzPkgs == "" {
-		return nil, errors.New("FUZZPKG environment variable required")
+		return nil, errors.New("FUZZ_PKG environment variable required")
 	}
 	cfg.FuzzPkgs = strings.Fields(fuzzPkgs)
 
