@@ -31,5 +31,4 @@ func Main(ctx context.Context, logger *slog.Logger, cfg *config.Config) {
 		config.CleanupWorkspace(logger)
 		os.Exit(1)
 	}
-
 }

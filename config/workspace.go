@@ -40,10 +40,13 @@ Usage Example:
 For more information, please refer to the project documentation.`
 
 // CleanupWorkspace removes the "out" directory to clean up the workspace.
-// It uses a context with a timeout (CleanupTimeout) to limit the duration of
-// the cleanup operation. Any errors encountered during the removal are logged.
+// It uses a context with a timeout (DefaultCleanupTimeout) to limit the
+// duration of the cleanup operation. Any errors encountered during the removal
+// are logged.
 func CleanupWorkspace(logger *slog.Logger) {
-	_, cancel := context.WithTimeout(context.Background(), CleanupTimeout)
+	_, cancel := context.WithTimeout(
+		context.Background(), DefaultCleanupTimeout,
+	)
 	defer cancel()
 
 	if err := os.RemoveAll("out"); err != nil {

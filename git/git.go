@@ -69,7 +69,6 @@ type BaseCloner struct {
 
 // Clone clones the repository into the specified path.
 func (bc *BaseCloner) Clone(ctx context.Context, logger *slog.Logger) error {
-
 	logger.Info("Cloning repository", "url", sanitizeURL(bc.URL),
 		"path", bc.Path, "desc", bc.Desc)
 
@@ -105,7 +104,7 @@ func CloneRepositories(ctx context.Context, logger *slog.Logger,
 	projectCloner := &ProjectCloner{
 		BaseCloner: &BaseCloner{
 			URL:  cfg.ProjectSrcPath,
-			Path: config.ProjectDir,
+			Path: config.DefaultProjectDir,
 			Desc: "project",
 		},
 	}
@@ -113,7 +112,7 @@ func CloneRepositories(ctx context.Context, logger *slog.Logger,
 	storageCloner := &StorageCloner{
 		BaseCloner: &BaseCloner{
 			URL:  cfg.GitStorageRepo,
-			Path: config.CorpusDir,
+			Path: config.DefaultCorpusDir,
 			Desc: "storage",
 		},
 	}
@@ -131,7 +130,7 @@ func CloneRepositories(ctx context.Context, logger *slog.Logger,
 	}
 
 	if err := g.Wait(); err != nil {
-		return fmt.Errorf("Error cloning repository: %w", err)
+		return fmt.Errorf("error cloning repository: %w", err)
 	}
 
 	return nil
@@ -139,12 +138,12 @@ func CloneRepositories(ctx context.Context, logger *slog.Logger,
 
 // CommitAndPushResults commits any changes in the corpus repository and pushes
 // the commit to the remote repository. It opens the corpus repository from
-// config.CorpusDir, checks for uncommitted changes, stages changes, creates a
-// commit using the provided commit message and author information, and then
-// pushes the commit. If there are no changes to commit, it logs that
+// config.DefaultCorpusDir, checks for uncommitted changes, stages changes,
+// creates a commit using the provided commit message and author information,
+// and then pushes the commit. If there are no changes to commit, it logs that
 // information.
 func CommitAndPushResults(logger *slog.Logger) error {
-	repo, err := git.PlainOpen(config.CorpusDir)
+	repo, err := git.PlainOpen(config.DefaultCorpusDir)
 	if err != nil {
 		return fmt.Errorf("failed to open git repo: %w", err)
 	}
@@ -165,15 +164,14 @@ func CommitAndPushResults(logger *slog.Logger) error {
 
 	commitOpts := &git.CommitOptions{
 		Author: &object.Signature{
-			Name:  config.GitUserName,
-			Email: config.GitUserEmail,
+			Name:  config.DefaultGitUserName,
+			Email: config.DefaultGitUserEmail,
 			When:  time.Now(),
 		},
 	}
 
-	if _, err := worktree.Commit(config.CommitMessage, commitOpts); err !=
-		nil {
-
+	_, err = worktree.Commit(config.DefaultCommitMessage, commitOpts)
+	if err != nil {
 		return fmt.Errorf("commit failed: %w", err)
 	}
 

@@ -17,24 +17,24 @@ const (
 	// overridden by environment variables.
 	DefaultFuzzTime = "120s"
 
-	// CleanupTimeout is the timeout used for cleanup operations.
-	CleanupTimeout = 5 * time.Second
+	// DefaultCleanupTimeout is the timeout used for cleanup operations.
+	DefaultCleanupTimeout = 5 * time.Second
 
-	// CorpusDir is the directory where the fuzzing corpus is stored.
-	CorpusDir = "out/corpus"
+	// DefaultCorpusDir is the directory where the fuzzing corpus is stored.
+	DefaultCorpusDir = "out/corpus"
 
-	// ProjectDir is the directory where the project is located.
-	ProjectDir = "out/project"
+	// DefaultProjectDir is the directory where the project is located.
+	DefaultProjectDir = "out/project"
 
-	// GitUserName is the default git user name used for commits.
-	GitUserName = "github-actions[bot]"
+	// DefaultGitUserName is the default git user name used for commits.
+	DefaultGitUserName = "github-actions[bot]"
 
-	// GitUserEmail is the default git user email used for commits.
-	GitUserEmail = "github-actions[bot]@users.noreply.github.com"
+	// DefaultGitUserEmail is the default git user email used for commits.
+	DefaultGitUserEmail = "github-actions[bot]@users.noreply.github.com"
 
-	// CommitMessage is the commit message used when updating the fuzz
-	// corpus.
-	CommitMessage = "Update fuzz corpus"
+	// DefaultCommitMessage is the commit message used when updating the
+	// fuzz corpus.
+	DefaultCommitMessage = "Update fuzz corpus"
 )
 
 // Config holds the configuration parameters for the fuzzing setup.
@@ -52,7 +52,7 @@ type Config struct {
 // will return the error.
 func LoadEnv() error {
 	if err := godotenv.Load(); err != nil {
-		return fmt.Errorf("Failed to load .env file: %v", err)
+		return fmt.Errorf("failed to load .env file: %w", err)
 	}
 	return nil
 }
