@@ -8,7 +8,7 @@ on:
 
 jobs:
   format:
-    name: Check Format
+    name: Check Format and Lint
     runs-on: ubuntu-latest
 
     steps:
@@ -29,6 +29,11 @@ jobs:
           echo "$fmt_result"
           exit 1
         fi
+
+    - name: Check golangci-lint
+      uses: golangci/golangci-lint-action@v8
+      with:
+        version: v2.1
 
   build:
     name: Build continuous fuzzing app
