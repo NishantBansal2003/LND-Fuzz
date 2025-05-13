@@ -30,7 +30,7 @@ jobs:
           exit 1
         fi
 
-    - name: Install golangci-lint
+    - name: Check golangci-lint
       uses: golangci/golangci-lint-action@v8
       with:
         version: v2.1
