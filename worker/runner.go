@@ -26,8 +26,7 @@ func Main(ctx context.Context, logger *slog.Logger, cfg *config.Config) {
 	if err := fuzz.RunFuzzing(ctx, logger, cfg); err != nil {
 		logger.Error("Fuzzing process failed", "error", err)
 
-		// Perform workspace cleanup before exiting due to the fuzzing
-		// error.
+		// Perform workspace cleanup before exiting due to the fuzzing error.
 		config.CleanupWorkspace(logger)
 		os.Exit(1)
 	}
