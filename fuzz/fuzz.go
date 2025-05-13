@@ -52,7 +52,7 @@ func listFuzzTargets(ctx context.Context, logger *slog.Logger,
 
 	logger.Info("Discovering fuzz targets", "package", pkg)
 
-	pkgPath := filepath.Join(config.ProjectDir, pkg)
+	pkgPath := filepath.Join(config.DefaultProjectDir, pkg)
 	cmd := exec.CommandContext(ctx, "go", "test", "-list=^Fuzz", ".")
 	cmd.Dir = pkgPath
 
@@ -87,14 +87,15 @@ func executeFuzzTarget(ctx context.Context, logger *slog.Logger, pkg string,
 
 	logger.Info("Executing fuzz target", "package", pkg, "target", target)
 
-	pkgPath := filepath.Join(config.ProjectDir, pkg)
+	pkgPath := filepath.Join(config.DefaultProjectDir, pkg)
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
-	corpusPath := filepath.Join(cwd, config.CorpusDir, pkg, "testdata",
-		"fuzz")
+	corpusPath := filepath.Join(
+		cwd, config.DefaultCorpusDir, pkg, "testdata", "fuzz",
+	)
 
 	args := []string{
 		"test",
