@@ -30,6 +30,11 @@ jobs:
           exit 1
         fi
 
+    - name: Install golangci-lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: v2.1.6
+
     - name: Check Lint
       run: make lint
 
