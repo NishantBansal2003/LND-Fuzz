@@ -16,6 +16,10 @@ run: build
 test:
 	go test ./... -v
 
+#? cover: Generate the test coverage
+cover:
+	go test -cover ./...
+
 #? lint: Run golangci-lint
 lint:
 	golangci-lint run -v
