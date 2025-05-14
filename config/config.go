@@ -51,6 +51,12 @@ type Config struct {
 // the application. If the file is not found or fails to load, the application
 // will return the error.
 func LoadEnv() error {
+	// If '.env' does not exist, load environment variables from the
+	// process's environment
+	if _, err := os.Stat(".env"); os.IsNotExist(err) {
+		return nil
+	}
+
 	if err := godotenv.Load(); err != nil {
 		return fmt.Errorf("failed to load .env file: %w", err)
 	}
