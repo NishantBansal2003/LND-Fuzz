@@ -3,11 +3,9 @@ package scheduler
 import (
 	"context"
 	"log/slog"
-	"os"
 	"time"
 
 	"github.com/NishantBansal2003/LND-Fuzz/config"
-	"github.com/NishantBansal2003/LND-Fuzz/git"
 	"github.com/NishantBansal2003/LND-Fuzz/worker"
 )
 
@@ -45,7 +43,7 @@ func RunFuzzingCycles(ctx context.Context, logger *slog.Logger, cfg *config.
 			cancelCycle()
 			// Give a buffer time for routines to exit gracefully.
 			time.Sleep(5 * time.Second)
-			performCleanup(logger)
+			config.PerformCleanup(logger, cfg)
 		case <-ctx.Done():
 			// Overall application context canceled.
 			cancelCycle()
@@ -53,7 +51,7 @@ func RunFuzzingCycles(ctx context.Context, logger *slog.Logger, cfg *config.
 				"cycle; performing final cleanup.")
 			// Buffer time before cleanup.
 			time.Sleep(5 * time.Second)
-			performCleanup(logger)
+			config.PerformCleanup(logger, cfg)
 			return
 		}
 	}
@@ -75,22 +73,5 @@ func runFuzzingWorker(ctx context.Context, logger *slog.Logger, cfg *config.
 	default:
 		// Execute the main fuzzing operation.
 		worker.Main(ctx, logger, cfg)
-	}
-}
-
-// performCleanup handles post-cycle cleanup of the workspace and commits/pushes
-// the results. If committing or pushing fails, it logs the error and terminates
-// the program.
-//
-// Note: CleanupWorkspace is deferred within this function.
-func performCleanup(logger *slog.Logger) {
-	// Ensure that workspace cleanup is performed even if
-	// CommitAndPushResults fails.
-	defer config.CleanupWorkspace(logger)
-
-	// Commit and push results; if an error occurs, log it and exit.
-	if err := git.CommitAndPushResults(logger); err != nil {
-		logger.Error("Failed to commit/push results", "error", err)
-		os.Exit(1)
 	}
 }

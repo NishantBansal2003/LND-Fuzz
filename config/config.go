@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -35,15 +36,20 @@ const (
 	// DefaultCommitMessage is the commit message used when updating the
 	// fuzz corpus.
 	DefaultCommitMessage = "Update fuzz corpus"
+
+	// DefaultReportName is the directory name where fuzzing results are
+	// stored.
+	DefaultReportName = "fuzz_results"
 )
 
 // Config holds the configuration parameters for the fuzzing setup.
 type Config struct {
-	ProjectSrcPath string
-	GitStorageRepo string
-	FuzzPkgs       []string
-	FuzzTime       string
-	NumProcesses   int
+	ProjectSrcPath  string
+	GitStorageRepo  string
+	FuzzResultsPath string
+	FuzzPkgs        []string
+	FuzzTime        string
+	NumProcesses    int
 }
 
 // LoadEnv loads environment variables from a .env file in the current
@@ -99,6 +105,14 @@ func LoadConfig() (*Config, error) {
 	if cfg.GitStorageRepo == "" {
 		return nil, errors.New("GIT_STORAGE_REPO environment variable" +
 			" required")
+	}
+
+	cfg.FuzzResultsPath = filepath.Join(
+		os.Getenv("FUZZ_RESULTS_PATH"), DefaultReportName,
+	)
+	err := os.MkdirAll(cfg.FuzzResultsPath, 0755)
+	if err != nil && !os.IsExist(err) {
+		return nil, fmt.Errorf("Failed to create directory: %w", err)
 	}
 
 	if fuzzTimeStr := os.Getenv("FUZZ_TIME"); fuzzTimeStr != "" {
