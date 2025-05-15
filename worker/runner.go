@@ -18,7 +18,7 @@ func Main(ctx context.Context, logger *slog.Logger, cfg *config.Config) {
 
 		// Perform workspace cleanup before exiting due to the cloning
 		// error.
-		config.CleanupWorkspace(logger)
+		config.PerformCleanup(logger, cfg)
 		os.Exit(1)
 	}
 
@@ -28,7 +28,7 @@ func Main(ctx context.Context, logger *slog.Logger, cfg *config.Config) {
 
 		// Perform workspace cleanup before exiting due to the fuzzing
 		// error.
-		config.CleanupWorkspace(logger)
+		config.PerformCleanup(logger, cfg)
 		os.Exit(1)
 	}
 }

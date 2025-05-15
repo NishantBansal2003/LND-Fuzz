@@ -4,6 +4,9 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"path/filepath"
+
+	"github.com/otiai10/copy"
 )
 
 const HelpText = `Usage: go run main.go [command]
@@ -39,11 +42,11 @@ Usage Example:
 
 For more information, please refer to the project documentation.`
 
-// CleanupWorkspace removes the "out" directory to clean up the workspace.
+// cleanupWorkspace removes the "out" directory to clean up the workspace.
 // It uses a context with a timeout (DefaultCleanupTimeout) to limit the
 // duration of the cleanup operation. Any errors encountered during the removal
 // are logged.
-func CleanupWorkspace(logger *slog.Logger) {
+func cleanupWorkspace(logger *slog.Logger) {
 	_, cancel := context.WithTimeout(
 		context.Background(), DefaultCleanupTimeout,
 	)
@@ -52,4 +55,27 @@ func CleanupWorkspace(logger *slog.Logger) {
 	if err := os.RemoveAll("out"); err != nil {
 		logger.Error("Cleanup failed", "error", err)
 	}
+}
+
+// PerformCleanup handles post-cycle cleanup of the workspace and stores the
+// results. If storing of the corpus fails, it logs the error and terminates
+// the program.
+func PerformCleanup(logger *slog.Logger, cfg *Config) {
+	// Ensure that workspace cleanup is performed even if storing fails.
+	defer cleanupWorkspace(logger)
+
+	corpusPath := filepath.Join(DefaultCorpusDir, "fuzzing")
+	if _, err := os.Stat(corpusPath); os.IsNotExist(err) {
+		logger.Info("No corpus directory to output")
+
+		return
+	}
+
+	// Copy corpus to the results directory
+	if err := copy.Copy(corpusPath, cfg.FuzzResultsPath); err != nil {
+		logger.Error("Failed to copy corpus", "error", err)
+		os.Exit(1)
+	}
+
+	logger.Info("Successfully updated corpus directory")
 }

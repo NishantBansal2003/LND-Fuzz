@@ -1,7 +1,6 @@
 package fuzz
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -14,12 +13,16 @@ import (
 	"sync"
 
 	"github.com/NishantBansal2003/LND-Fuzz/config"
+	"github.com/NishantBansal2003/LND-Fuzz/parser"
+	"golang.org/x/sync/errgroup"
 )
 
 // RunFuzzing iterates over the configured fuzz packages and executes
 // fuzz targets for each package. It stops if the context is canceled.
 func RunFuzzing(ctx context.Context, logger *slog.Logger,
 	cfg *config.Config) error {
+
+	g, ctx := errgroup.WithContext(ctx)
 
 	for _, pkg := range cfg.FuzzPkgs {
 		select {
@@ -33,14 +36,23 @@ func RunFuzzing(ctx context.Context, logger *slog.Logger,
 			}
 
 			for _, target := range targets {
-				if err := executeFuzzTarget(ctx, logger, pkg,
-					target, cfg); err != nil {
-					return fmt.Errorf("fuzzing failed for"+
-						" %q/%q: %w", pkg, target, err)
-				}
+				g.Go(func() error {
+					if err := executeFuzzTarget(ctx, logger,
+						pkg, target, cfg); err != nil {
+						return fmt.Errorf("fuzzing "+
+							"failed for %q/%q: %w",
+							pkg, target, err)
+					}
+					return nil
+				})
 			}
 		}
 	}
+
+	if err := g.Wait(); err != nil {
+		return fmt.Errorf("error during fuzzing: %w", err)
+	}
+
 	return nil
 }
 
@@ -96,6 +108,7 @@ func executeFuzzTarget(ctx context.Context, logger *slog.Logger, pkg string,
 	corpusPath := filepath.Join(
 		cwd, config.DefaultCorpusDir, pkg, "testdata", "fuzz",
 	)
+	maybeFailingCorpusPath := filepath.Join(pkgPath, "testdata", "fuzz")
 
 	args := []string{
 		"test",
@@ -112,43 +125,63 @@ func executeFuzzTarget(ctx context.Context, logger *slog.Logger, pkg string,
 	if err != nil {
 		return fmt.Errorf("stdout pipe failed: %w", err)
 	}
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return fmt.Errorf("stderr pipe failed: %w", err)
-	}
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("command start failed: %w", err)
 	}
 
+	fuzzTargetFailingChan := make(chan bool, 1)
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(1)
 
-	go streamOutput(logger.With("target", target), "stdout", &wg, stdout)
-	go streamOutput(logger.With("target", target), "stderr", &wg, stderr)
+	// Stream and process the standard output of 'go test', which may
+	// include both stdout and stderr content.
+	go streamFuzzOutput(logger.With("target", target), &wg, stdout,
+		maybeFailingCorpusPath, cfg, target, fuzzTargetFailingChan)
 
 	wg.Wait()
 
-	if err := cmd.Wait(); err != nil && ctx.Err() == nil {
-		return fmt.Errorf("fuzz execution failed: %w", err)
+	// Proceed to return an error only if the fuzz target did not fail
+	// (i.e., no failure was detected during fuzzing), and the command
+	// execution resulted in an error, and the context wasn't canceled.
+	err = cmd.Wait()
+	isFailing := <-fuzzTargetFailingChan
+	if err != nil {
+		if ctx.Err() == nil && !isFailing {
+			return fmt.Errorf("fuzz execution failed: %w", err)
+		}
 	}
 
-	logger.Info("Fuzz target completed successfully", "package", pkg,
+	// If the fuzz target fails, 'go test' saves the failing input in the
+	// package's testdata/fuzz/<FuzzTestName> directory. To prevent these
+	// saved inputs from causing subsequent test runs to fail (especially
+	// when running other fuzz targets), we remove the testdata directory to
+	// clean up the failing inputs.
+	if isFailing {
+		failingInputPath := filepath.Join(pkgPath, "testdata", "fuzz",
+			target)
+		if err := os.RemoveAll(failingInputPath); err != nil {
+			return fmt.Errorf("failing input cleanup failed: %w",
+				err)
+		}
+	}
+
+	logger.Info("Fuzzing completed successfully", "package", pkg,
 		"target", target,
 	)
 
 	return nil
 }
 
-// streamOutput reads from the provided reader line by line and logs each line
-// using the provided logger. It signals completion via the WaitGroup.
-func streamOutput(logger *slog.Logger, stream string, wg *sync.WaitGroup,
-	r io.Reader) {
+// streamFuzzOutput reads from the provided reader line by line and logs each
+// line using the provided logger. It signals completion via the WaitGroup.
+func streamFuzzOutput(logger *slog.Logger, wg *sync.WaitGroup,
+	r io.Reader, corpusPath string, cfg *config.Config, target string,
+	fuzzTargetFailingChan chan bool) {
 
 	defer wg.Done()
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		logger.Info("Fuzzer output", "stream", stream, "message",
-			scanner.Text())
-	}
+	processor := parser.NewFuzzProcessor(logger, cfg, corpusPath, target)
+	processor.ProcessStream(r)
+
+	fuzzTargetFailingChan <- processor.State.SeenFailure
 }
