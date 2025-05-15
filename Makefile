@@ -17,11 +17,11 @@ run: build
 run-help: build
 	./$(APP_NAME) help
 
-#? docker: Build the docker image of go continuous fuzz project
+#? docker: Build the docker image of go-continuous-fuzz project
 docker:
 	docker build -t $(DOCKER_APP_NAME) .
 
-#? docker-run-file: Run the go continuous fuzz container, loading every variable from $(ENV_FILE).
+#? docker-run-file: Run the go-continuous-fuzz container, loading every variable from $(ENV_FILE).
 docker-run-file: docker
 	@# ensure the file exists
 	@if [ ! -f "$(ENV_FILE)" ]; then \

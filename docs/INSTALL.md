@@ -1,4 +1,4 @@
-# Continuous Fuzzing for LND
+# Go Continuous Fuzz
 
 ## Installation Instructions
 
@@ -31,25 +31,25 @@ source ~/.bashrc
    - **Ubuntu/Debian**: `sudo apt-get install build-essential`
    - **MacOS**: `xcode-select --install`
 
-### Step 4: Build the Continuous-Fuzz app
+### Step 4: Build the go-continuous-fuzz project
 
-1. Run the following command to build the Continuous-Fuzz app:
+1. Run the following command to build the go-continuous-fuzz project:
 
 ```sh
 make build
 ```
 
-### Step 5: Run the Continuous-Fuzz App
+### Step 5: Run the go-continuous-fuzz project
 
 1. Make sure the required environment variables are set.
    For more details, see: [docs/USAGE.md](USAGE.md)
-2. Run the following command to run the Continuous-Fuzz app:
+2. Run the following command to run the go-continuous-fuzz app:
 
 ```sh
 make run
 ```
 
-### Step 6: Run the Continuous-Fuzz App in docker container
+### Step 6: Run the go-continuous-fuzz project in docker
 
 1. Run the following command to run the Continuous-Fuzz app in docker container:
 

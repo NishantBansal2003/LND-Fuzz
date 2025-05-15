@@ -11,7 +11,7 @@ RUN apt-get update && \
 # Create a directory for cloning the repository.
 RUN mkdir /app
 
-# Clone the Continuous Fuzzing For LND repo into the /app directory.
+# Clone the go-continuous-fuzz repo into the /app directory.
 RUN git clone https://github.com/NishantBansal2003/LND-Fuzz.git /app
 
 # Change current working directory.
@@ -20,7 +20,7 @@ WORKDIR /app
 # Install Go modules.
 RUN go mod download
 
-# Build the continuous fuzzing project.
+# Build the go-continuous-fuzz project.
 RUN make build
 
 # By default, run the fuzzing target with `make run`

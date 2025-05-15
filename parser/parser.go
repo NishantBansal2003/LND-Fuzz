@@ -35,12 +35,26 @@ var (
 // FuzzProcessor reads a stream of fuzzer output lines, detects failures,
 // writes logs, and captures the failing input for later logging.
 type FuzzProcessor struct {
-	logger     *slog.Logger
-	cfg        *config.Config
+	// Logger used to record informational and error messages during
+	// processing.
+	logger *slog.Logger
+
+	// Configuration settings provided by the user
+	cfg *config.Config
+
+	// Path to the directory where the input failing corpus (if any) is
+	// stored.
 	corpusPath string
-	target     string
-	logWriter  LogWriter
-	State      *ProcessState
+
+	// Name of the fuzz target being processed.
+	target string
+
+	// Interface responsible for writing logs to the desired output.
+	logWriter LogWriter
+
+	// Tracks the state of the processing, including whether a failure was
+	// detected.
+	State *ProcessState
 }
 
 // ProcessState holds mutable state information while processing fuzzer output.
@@ -144,7 +158,12 @@ func NewFuzzProcessor(logger *slog.Logger, cfg *config.Config,
 // log writer, flushing any accumulated error data.
 func (fp *FuzzProcessor) ProcessStream(stream io.Reader) {
 	scanner := bufio.NewScanner(stream)
+
+	// Iterate over each line in the output stream.
 	for scanner.Scan() {
+		// Process the current line to detect any errors or failures.
+		// If an error occurs during processing, log it using the
+		// provided logWriter.
 		if err := fp.processLine(scanner.Text()); err != nil {
 			fp.logger.Error("Error processing line", "error", err)
 		}
@@ -159,13 +178,18 @@ func (fp *FuzzProcessor) ProcessStream(stream io.Reader) {
 func (fp *FuzzProcessor) processLine(line string) error {
 	fp.logger.Info("Fuzzer output", "message", line)
 
+	// If a failure has not yet been detected, check if this line indicates
+	// a failure.
 	if !fp.State.SeenFailure {
 		if err := fp.handleFailureDetection(line); err != nil {
 			return fmt.Errorf("failure detection failed: %w", err)
 		}
 	}
 
+	// If a failure has been detected, process the line to extract and
+	// record relevant failure information.
 	if fp.State.SeenFailure {
+		// Handle the line in the context of a detected failure.
 		if err := fp.handleFailureLine(line); err != nil {
 			return fmt.Errorf("failure line handling failed: %w",
 				err)
@@ -178,11 +202,17 @@ func (fp *FuzzProcessor) processLine(line string) error {
 // handleFailureDetection looks for the first "--- FAIL:" marker. When found,
 // it initializes the failure log file for subsequent lines.
 func (fp *FuzzProcessor) handleFailureDetection(line string) error {
+	// Check if the line contains the failure marker.
 	if strings.Contains(line, "--- FAIL:") {
+		// Mark that a failure has been detected.
 		fp.State.SeenFailure = true
+
+		// Construct the log file name and path for storing failure
+		// details.
 		logFileName := fmt.Sprintf("%s_failure.log", fp.target)
 		logPath := filepath.Join(fp.cfg.FuzzResultsPath, logFileName)
 
+		// Initialize the log writer with the constructed path.
 		if err := fp.logWriter.Initialize(logPath); err != nil {
 			return fmt.Errorf("log writer initialization failed: "+
 				"%w", err)
@@ -196,41 +226,56 @@ func (fp *FuzzProcessor) handleFailureDetection(line string) error {
 // handleFailureLine writes the line to the log, then on the first occurrence
 // of a failure-input marker extracts the testcase and reads its contents.
 func (fp *FuzzProcessor) handleFailureLine(line string) error {
+	// Log the current line to the failure log file.
 	if err := fp.logWriter.WriteLine(line); err != nil {
 		return fmt.Errorf("failed to write log line: %w", err)
 	}
 
+	// If the failing input has already been printed, no further action is
+	// needed.
 	if fp.State.InputPrinted {
 		return nil
 	}
 
+	// Parse the line to extract the fuzz target and ID (hex) of the failing
+	// input.
 	target, id, err := parseFailureLine(line)
 	if err != nil {
 		return fmt.Errorf("failure line parsing failed: %w", err)
 	}
+	// If either target or ID is empty, skip further processing.
 	if target == "" || id == "" {
 		return nil
 	}
 
+	// Read the input data associated with the failing target and ID.
 	errorData, err := fp.readInputData(target, id)
 	if err != nil {
 		return fmt.Errorf("input data read failed: %w", err)
 	}
 
+	// Store the read input data and mark that the input has been printed.
 	fp.State.ErrorData = errorData
 	fp.State.InputPrinted = true
 	return nil
 }
 
-// parseFailureLine returns the fuzz target name and input ID if the line
-// matches fuzzFailureRegex; otherwise returns empty strings.
+// parseFailureLine attempts to extract the fuzz target name and input ID
+// from a line of fuzzing output. It uses a predefined regular expression
+// to match lines that indicate a failure, capturing the relevant details
+// if the line conforms to the expected format.
 func parseFailureLine(line string) (string, string, error) {
+	// Apply the regular expression to the line to find matches
 	matches := fuzzFailureRegex.FindStringSubmatch(line)
+
+	// Return empty strings if no match is found
 	if matches == nil {
 		return "", "", nil
 	}
 
 	var target, id string
+	// Iterate over the named subexpressions to assign values of fuzz target
+	// and id.
 	for i, name := range fuzzFailureRegex.SubexpNames() {
 		switch name {
 		case "target":
@@ -245,13 +290,23 @@ func parseFailureLine(line string) (string, string, error) {
 // readInputData attempts to read the failing input file from the corpus and
 // returns either its contents or an error placeholder string.
 func (fp *FuzzProcessor) readInputData(target, id string) (string, error) {
+	// Construct the relative path to the failing input file.
 	failingInputPath := filepath.Join(target, id)
+
+	// Build the relativr path to the failing input file within the project.
 	inputPath := filepath.Join(fp.corpusPath, failingInputPath)
+
+	// Attempt to read the content of the input file.
 	data, err := os.ReadFile(inputPath)
 	if err != nil {
+		// If reading fails, return a placeholder string indicating the
+		// failure.
 		return fmt.Sprintf("\n<< failed to read %s: %v >>\n",
 			failingInputPath, err), nil
 	}
+
+	// If reading succeeds, format the content with a header indicating it's
+	// a failing test case.
 	return fmt.Sprintf("\n\n=== Failing testcase (%s) ===\n%s",
 		failingInputPath, data), nil
 }

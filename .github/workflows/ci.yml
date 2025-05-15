@@ -36,7 +36,7 @@ jobs:
         version: v2.1
 
   build:
-    name: Build continuous fuzzing app
+    name: Build go-continuous-fuzz project
     runs-on: ubuntu-latest
 
     steps:
