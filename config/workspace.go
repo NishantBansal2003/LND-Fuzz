@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -76,6 +77,13 @@ func PerformCleanup(logger *slog.Logger, cfg *Config) {
 		return
 	}
 
+	// Ensure the FuzzResultsPath directory exists (creates parents as
+	// needed)
+	if err := MayBeCreateFuzzResultsDir(cfg); err != nil {
+		logger.Error("Failed to create fuzz result file", "error", err)
+		os.Exit(1)
+	}
+
 	// Copy corpus to the results directory
 	if err := copy.Copy(corpusPath, cfg.FuzzResultsPath); err != nil {
 		logger.Error("Failed to copy corpus", "error", err)
@@ -83,4 +91,17 @@ func PerformCleanup(logger *slog.Logger, cfg *Config) {
 	}
 
 	logger.Info("Successfully updated corpus directory")
+}
+
+// MayBeCreateFuzzResultsDir ensures that the directory specified by
+// cfg.FuzzResultsPath exists, creating it along with any necessary parent
+// directories if they do not already exist.
+func MayBeCreateFuzzResultsDir(cfg *Config) error {
+	// Ensure the directory exists (creates parents as needed)
+	err := os.MkdirAll(cfg.FuzzResultsPath, 0755)
+	if err != nil && !os.IsExist(err) {
+		return fmt.Errorf("Failed to create directory: %w", err)
+	}
+
+	return nil
 }

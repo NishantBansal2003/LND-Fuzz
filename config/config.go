@@ -136,18 +136,6 @@ func LoadConfig() (*Config, error) {
 			" required")
 	}
 
-	// Build the directory where fuzz reports (and logs) will be written
-	// FUZZ_RESULTS_PATH may itself come from an env var (can be empty)
-	cfg.FuzzResultsPath = filepath.Join(
-		os.Getenv("FUZZ_RESULTS_PATH"), DefaultReportName,
-	)
-
-	// Ensure the directory exists (creates parents as needed)
-	err := os.MkdirAll(cfg.FuzzResultsPath, 0755)
-	if err != nil && !os.IsExist(err) {
-		return nil, fmt.Errorf("Failed to create directory: %w", err)
-	}
-
 	// Override default FuzzTime if user provided a value
 	if fuzzTimeStr := os.Getenv("FUZZ_TIME"); fuzzTimeStr != "" {
 		// parse as integer seconds
@@ -171,6 +159,12 @@ func LoadConfig() (*Config, error) {
 		return nil, errors.New("FUZZ_PKG environment variable required")
 	}
 	cfg.FuzzPkgs = strings.Fields(fuzzPkgs) // split on whitespace
+
+	// Build the directory where fuzz reports (and logs) will be written
+	// FUZZ_RESULTS_PATH may itself come from an env var (can be empty)
+	cfg.FuzzResultsPath = filepath.Join(
+		os.Getenv("FUZZ_RESULTS_PATH"), DefaultReportName,
+	)
 
 	return cfg, nil
 }
