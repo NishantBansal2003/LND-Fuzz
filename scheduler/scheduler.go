@@ -39,18 +39,24 @@ func RunFuzzingCycles(ctx context.Context, logger *slog.Logger, cfg *config.
 		case <-time.After(cycleDuration):
 			logger.Info("Cycle duration complete; initiating " +
 				"cleanup.")
+
 			// Cancel the current cycle.
 			cancelCycle()
+
 			// Give a buffer time for routines to exit gracefully.
 			time.Sleep(5 * time.Second)
+
 			config.PerformCleanup(logger, cfg)
 		case <-ctx.Done():
-			// Overall application context canceled.
-			cancelCycle()
 			logger.Info("Shutdown initiated during fuzzing " +
 				"cycle; performing final cleanup.")
+
+			// Overall application context canceled.
+			cancelCycle()
+
 			// Buffer time before cleanup.
 			time.Sleep(5 * time.Second)
+
 			config.PerformCleanup(logger, cfg)
 			return
 		}

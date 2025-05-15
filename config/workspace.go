@@ -36,6 +36,11 @@ Environment Variables:
   FUZZ_PKG   (Required)
           The specific Go package within the repository to be fuzzed.
 
+  FUZZ_RESULTS_PATH
+          Path to store fuzzing results, relative to the current working
+	  directory
+          Default: Project root directory
+
 Usage Example:
   Set the necessary environment variables, then start fuzzing:
       go run main.go

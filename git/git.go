@@ -95,12 +95,13 @@ type StorageCloner struct {
 	// Additional fields related to the storage can be added.
 }
 
-// CloneRepositories clones the project and storage repositories based on the
-// provided configuration. It logs progress and returns an error if any cloning
-// step fails.
+// CloneRepositories concurrently clones the project and storage repositories
+// based on the provided configuration. It logs progress and returns an error if
+// any cloning step fails.
 func CloneRepositories(ctx context.Context, logger *slog.Logger,
 	cfg *config.Config) error {
 
+	// Prepare a cloner for the project source repository
 	projectCloner := &ProjectCloner{
 		BaseCloner: &BaseCloner{
 			URL:  cfg.ProjectSrcPath,
@@ -109,6 +110,7 @@ func CloneRepositories(ctx context.Context, logger *slog.Logger,
 		},
 	}
 
+	// Prepare a cloner for the storage corpus repository
 	storageCloner := &StorageCloner{
 		BaseCloner: &BaseCloner{
 			URL:  cfg.GitStorageRepo,
@@ -117,9 +119,11 @@ func CloneRepositories(ctx context.Context, logger *slog.Logger,
 		},
 	}
 
+	// Register both cloners with the repository manager
 	repoManager := NewRepositoryManager()
 	repoManager.AddCloners(projectCloner, storageCloner)
 
+	// Clone both repos concurrently, with shared context
 	g, ctx := errgroup.WithContext(ctx)
 
 	for _, cloner := range repoManager.cloners {
@@ -129,6 +133,7 @@ func CloneRepositories(ctx context.Context, logger *slog.Logger,
 		})
 	}
 
+	// Wait for both clones to finish or the first error to occur
 	if err := g.Wait(); err != nil {
 		return fmt.Errorf("error cloning repository: %w", err)
 	}

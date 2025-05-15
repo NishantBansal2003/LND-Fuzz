@@ -42,14 +42,35 @@ make build
 ### Step 5: Run the Continuous-Fuzz App
 
 1. Make sure the required environment variables are set.
-For more details, see: [docs/USAGE.md](USAGE.md)
+   For more details, see: [docs/USAGE.md](USAGE.md)
 2. Run the following command to run the Continuous-Fuzz app:
 
 ```sh
 make run
 ```
 
-### Step 6: Run the Test Cases
+### Step 6: Run the Continuous-Fuzz App in docker container
+
+1. Run the following command to run the Continuous-Fuzz app in docker container:
+
+```sh
+make docker-run-file ENV_FILE=<required> VOLUME_MOUNTS=<optional>
+```
+
+OR
+
+```sh
+make docker-run-env \
+  FUZZ_NUM_PROCESSES=<optional> \
+  PROJECT_SRC_PATH=<required> \
+  GIT_STORAGE_REPO=<required> \
+  FUZZ_TIME=<optional> \
+  FUZZ_PKG=<required> \
+  FUZZ_RESULTS_PATH=<optional> \
+  VOLUME_MOUNTS=<optional>
+```
+
+### Step 7: Run the Test Cases
 
 1. Run the following command to execute the test cases:
 

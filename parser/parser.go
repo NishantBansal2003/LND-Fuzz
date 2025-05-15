@@ -32,6 +32,8 @@ var (
 	)
 )
 
+// FuzzProcessor reads a stream of fuzzer output lines, detects failures,
+// writes logs, and captures the failing input for later logging.
 type FuzzProcessor struct {
 	logger     *slog.Logger
 	cfg        *config.Config
@@ -41,23 +43,45 @@ type FuzzProcessor struct {
 	State      *ProcessState
 }
 
+// ProcessState holds mutable state information while processing fuzzer output.
 type ProcessState struct {
-	SeenFailure  bool
-	ErrorData    string
+	// SeenFailure indicates whether a failure marker line has been spotted.
+	SeenFailure bool
+
+	// ErrorData contains the formatted contents of the failing testcase.
+	ErrorData string
+
+	// InputPrinted indicates whether the failing input has already been
+	// captured.
 	InputPrinted bool
 }
 
+// LogWriter defines the interface for writing fuzz failure logs to any sink.
 type LogWriter interface {
+	// Initialize creates (or truncates, if it already exists) the log file
+	// at the specified path, preparing the sink for subsequent log output.
 	Initialize(logPath string) error
+
+	// WriteLine writes a single line of fuzzer output (followed by a
+	// newline) to the underlying log sink.
 	WriteLine(line string) error
+
+	// WriteErrorData writes the formatted contents of the failing testcase
+	// (plus newline) to the log file.
 	WriteErrorData(data string) error
+
+	// Close writes the trailing formatted contents of the failing testcase
+	// and closes the underlying file.
 	Close(errorData string) error
 }
 
+// FileLogWriter is a LogWriter that writes failure logs into a file.
 type FileLogWriter struct {
 	file *os.File
 }
 
+// Initialize creates (or truncates, if it already exists) the log file at the
+// specified path, preparing the sink for subsequent log output.
 func (fl *FileLogWriter) Initialize(logPath string) error {
 	logFile, err := os.Create(logPath)
 	if err != nil {
@@ -68,6 +92,8 @@ func (fl *FileLogWriter) Initialize(logPath string) error {
 	return nil
 }
 
+// WriteLine writes a single line of fuzzer output (followed by a newline) to
+// the underlying log sink.
 func (fl *FileLogWriter) WriteLine(line string) error {
 	_, err := fl.file.WriteString(line + "\n")
 	if err != nil {
@@ -77,6 +103,8 @@ func (fl *FileLogWriter) WriteLine(line string) error {
 	return nil
 }
 
+// WriteErrorData writes the formatted contents of the failing testcase (plus
+// newline) to the log file.
 func (fl *FileLogWriter) WriteErrorData(data string) error {
 	_, err := fl.file.WriteString(data + "\n")
 	if err != nil {
@@ -86,6 +114,8 @@ func (fl *FileLogWriter) WriteErrorData(data string) error {
 	return nil
 }
 
+// Close writes the trailing formatted contents of the failing testcase and
+// closes the underlying file.
 func (fl *FileLogWriter) Close(errorData string) error {
 	if err := fl.WriteErrorData(errorData); err != nil {
 		return fmt.Errorf("error data write failed: %w", err)
@@ -94,6 +124,8 @@ func (fl *FileLogWriter) Close(errorData string) error {
 	return fl.file.Close()
 }
 
+// NewFuzzProcessor constructs a FuzzProcessor for the given logger, config,
+// corpus path, and fuzz target name.
 func NewFuzzProcessor(logger *slog.Logger, cfg *config.Config,
 	corpusPath string, target string) *FuzzProcessor {
 
@@ -107,6 +139,9 @@ func NewFuzzProcessor(logger *slog.Logger, cfg *config.Config,
 	}
 }
 
+// ProcessStream reads each line from the fuzzing output, processes it (logging
+// every line and capturing any failure details), and when complete closes the
+// log writer, flushing any accumulated error data.
 func (fp *FuzzProcessor) ProcessStream(stream io.Reader) {
 	scanner := bufio.NewScanner(stream)
 	for scanner.Scan() {
@@ -115,9 +150,12 @@ func (fp *FuzzProcessor) ProcessStream(stream io.Reader) {
 		}
 	}
 
+	// Ensure we flush and close the log writer with the final error data.
 	defer func() { _ = fp.logWriter.Close(fp.State.ErrorData) }()
 }
 
+// processLine handles one line of fuzz output: it logs it, checks for failure
+// markers, and if in failure mode, writes lines and captures failing input.
 func (fp *FuzzProcessor) processLine(line string) error {
 	fp.logger.Info("Fuzzer output", "message", line)
 
@@ -137,6 +175,8 @@ func (fp *FuzzProcessor) processLine(line string) error {
 	return nil
 }
 
+// handleFailureDetection looks for the first "--- FAIL:" marker. When found,
+// it initializes the failure log file for subsequent lines.
 func (fp *FuzzProcessor) handleFailureDetection(line string) error {
 	if strings.Contains(line, "--- FAIL:") {
 		fp.State.SeenFailure = true
@@ -153,6 +193,8 @@ func (fp *FuzzProcessor) handleFailureDetection(line string) error {
 	return nil
 }
 
+// handleFailureLine writes the line to the log, then on the first occurrence
+// of a failure-input marker extracts the testcase and reads its contents.
 func (fp *FuzzProcessor) handleFailureLine(line string) error {
 	if err := fp.logWriter.WriteLine(line); err != nil {
 		return fmt.Errorf("failed to write log line: %w", err)
@@ -180,6 +222,8 @@ func (fp *FuzzProcessor) handleFailureLine(line string) error {
 	return nil
 }
 
+// parseFailureLine returns the fuzz target name and input ID if the line
+// matches fuzzFailureRegex; otherwise returns empty strings.
 func parseFailureLine(line string) (string, string, error) {
 	matches := fuzzFailureRegex.FindStringSubmatch(line)
 	if matches == nil {
@@ -198,6 +242,8 @@ func parseFailureLine(line string) (string, string, error) {
 	return target, id, nil
 }
 
+// readInputData attempts to read the failing input file from the corpus and
+// returns either its contents or an error placeholder string.
 func (fp *FuzzProcessor) readInputData(target, id string) (string, error) {
 	failingInputPath := filepath.Join(target, id)
 	inputPath := filepath.Join(fp.corpusPath, failingInputPath)
