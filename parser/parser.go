@@ -178,20 +178,21 @@ func (fp *FuzzProcessor) handleFailureLine(line string) error {
 
 	// Parse the line to extract the fuzz target and ID (hex) of the failing
 	// input.
-	target, id, err := parseFailureLine(line)
-	if err != nil {
-		return fmt.Errorf("failure line parsing failed: %w", err)
-	}
+	// When a fuzz target encounters a failure during f.Add, the crash is
+	// printed, but no input is saved to testdata/fuzz.
+	//
+	// The log output typically appears as:
+	//   failure while testing seed corpus entry: FuzzFoo/seed#0
+	//
+	// As a result, no error data will be printed.
+	target, id := parseFailureLine(line)
 	// If either target or ID is empty, skip further processing.
 	if target == "" || id == "" {
 		return nil
 	}
 
 	// Read the input data associated with the failing target and ID.
-	errorData, err := fp.readInputData(target, id)
-	if err != nil {
-		return fmt.Errorf("input data read failed: %w", err)
-	}
+	errorData := fp.readInputData(target, id)
 
 	// Store the read input data and mark that the input has been printed.
 	fp.State.ErrorData = errorData
@@ -203,13 +204,13 @@ func (fp *FuzzProcessor) handleFailureLine(line string) error {
 // from a line of fuzzing output. It uses a predefined regular expression
 // to match lines that indicate a failure, capturing the relevant details
 // if the line conforms to the expected format.
-func parseFailureLine(line string) (string, string, error) {
+func parseFailureLine(line string) (string, string) {
 	// Apply the regular expression to the line to find matches
 	matches := fuzzFailureRegex.FindStringSubmatch(line)
 
 	// Return empty strings if no match is found
 	if matches == nil {
-		return "", "", nil
+		return "", ""
 	}
 
 	var target, id string
@@ -223,12 +224,12 @@ func parseFailureLine(line string) (string, string, error) {
 			id = matches[i]
 		}
 	}
-	return target, id, nil
+	return target, id
 }
 
 // readInputData attempts to read the failing input file from the corpus and
 // returns either its contents or an error placeholder string.
-func (fp *FuzzProcessor) readInputData(target, id string) (string, error) {
+func (fp *FuzzProcessor) readInputData(target, id string) string {
 	// Construct the relative path to the failing input file.
 	failingInputPath := filepath.Join(target, id)
 
@@ -241,11 +242,11 @@ func (fp *FuzzProcessor) readInputData(target, id string) (string, error) {
 		// If reading fails, return a placeholder string indicating the
 		// failure.
 		return fmt.Sprintf("\n<< failed to read %s: %v >>\n",
-			failingInputPath, err), nil
+			failingInputPath, err)
 	}
 
 	// If reading succeeds, format the content with a header indicating it's
 	// a failing test case.
 	return fmt.Sprintf("\n\n=== Failing testcase (%s) ===\n%s",
-		failingInputPath, data), nil
+		failingInputPath, data)
 }

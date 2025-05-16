@@ -28,7 +28,7 @@ expected.
 Test coverage measures the amount of code being exercised by tests. We aim for
 good coverage to ensure robustness.
 
-The current test coverage in the codebase is ~0%.
+The current test coverage in the codebase is ~18%.
 
 To generate the test coverage, use the following command:
 

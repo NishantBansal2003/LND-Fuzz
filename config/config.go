@@ -27,16 +27,6 @@ const (
 	// DefaultProjectDir is the directory where the project is located.
 	DefaultProjectDir = "out/project"
 
-	// DefaultGitUserName is the default git user name used for commits.
-	DefaultGitUserName = "github-actions[bot]"
-
-	// DefaultGitUserEmail is the default git user email used for commits.
-	DefaultGitUserEmail = "github-actions[bot]@users.noreply.github.com"
-
-	// DefaultCommitMessage is the commit message used when updating the
-	// fuzz corpus.
-	DefaultCommitMessage = "Update fuzz corpus"
-
 	// DefaultReportName is the directory name where fuzzing results are
 	// stored.
 	DefaultReportName = "fuzz_results"
