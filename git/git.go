@@ -5,13 +5,11 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
-	"time"
 
 	"github.com/NishantBansal2003/LND-Fuzz/config"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
 // sanitizeURL parses the given raw URL string and returns a sanitized version
@@ -95,12 +93,13 @@ type StorageCloner struct {
 	// Additional fields related to the storage can be added.
 }
 
-// CloneRepositories clones the project and storage repositories based on the
-// provided configuration. It logs progress and returns an error if any cloning
-// step fails.
+// CloneRepositories concurrently clones the project and storage repositories
+// based on the provided configuration. It logs progress and returns an error if
+// any cloning step fails.
 func CloneRepositories(ctx context.Context, logger *slog.Logger,
 	cfg *config.Config) error {
 
+	// Prepare a cloner for the project source repository
 	projectCloner := &ProjectCloner{
 		BaseCloner: &BaseCloner{
 			URL:  cfg.ProjectSrcPath,
@@ -109,6 +108,7 @@ func CloneRepositories(ctx context.Context, logger *slog.Logger,
 		},
 	}
 
+	// Prepare a cloner for the storage corpus repository
 	storageCloner := &StorageCloner{
 		BaseCloner: &BaseCloner{
 			URL:  cfg.GitStorageRepo,
@@ -117,9 +117,11 @@ func CloneRepositories(ctx context.Context, logger *slog.Logger,
 		},
 	}
 
+	// Register both cloners with the repository manager
 	repoManager := NewRepositoryManager()
 	repoManager.AddCloners(projectCloner, storageCloner)
 
+	// Clone both repos concurrently, with shared context
 	g, ctx := errgroup.WithContext(ctx)
 
 	for _, cloner := range repoManager.cloners {
@@ -129,56 +131,10 @@ func CloneRepositories(ctx context.Context, logger *slog.Logger,
 		})
 	}
 
+	// Wait for both clones to finish or the first error to occur
 	if err := g.Wait(); err != nil {
 		return fmt.Errorf("error cloning repository: %w", err)
 	}
 
-	return nil
-}
-
-// CommitAndPushResults commits any changes in the corpus repository and pushes
-// the commit to the remote repository. It opens the corpus repository from
-// config.DefaultCorpusDir, checks for uncommitted changes, stages changes,
-// creates a commit using the provided commit message and author information,
-// and then pushes the commit. If there are no changes to commit, it logs that
-// information.
-func CommitAndPushResults(logger *slog.Logger) error {
-	repo, err := git.PlainOpen(config.DefaultCorpusDir)
-	if err != nil {
-		return fmt.Errorf("failed to open git repo: %w", err)
-	}
-
-	worktree, err := repo.Worktree()
-	if err != nil {
-		return fmt.Errorf("failed to get worktree: %w", err)
-	}
-
-	if status, err := worktree.Status(); err != nil || status.IsClean() {
-		logger.Info("No corpus changes to commit")
-		return err
-	}
-
-	if _, err := worktree.Add("."); err != nil {
-		return fmt.Errorf("failed to stage changes: %w", err)
-	}
-
-	commitOpts := &git.CommitOptions{
-		Author: &object.Signature{
-			Name:  config.DefaultGitUserName,
-			Email: config.DefaultGitUserEmail,
-			When:  time.Now(),
-		},
-	}
-
-	_, err = worktree.Commit(config.DefaultCommitMessage, commitOpts)
-	if err != nil {
-		return fmt.Errorf("commit failed: %w", err)
-	}
-
-	if err := repo.Push(&git.PushOptions{}); err != nil {
-		return fmt.Errorf("push failed: %w", err)
-	}
-
-	logger.Info("Successfully updated corpus repository")
 	return nil
 }

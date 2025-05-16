@@ -27,16 +27,6 @@ const (
 	// DefaultProjectDir is the directory where the project is located.
 	DefaultProjectDir = "out/project"
 
-	// DefaultGitUserName is the default git user name used for commits.
-	DefaultGitUserName = "github-actions[bot]"
-
-	// DefaultGitUserEmail is the default git user email used for commits.
-	DefaultGitUserEmail = "github-actions[bot]@users.noreply.github.com"
-
-	// DefaultCommitMessage is the commit message used when updating the
-	// fuzz corpus.
-	DefaultCommitMessage = "Update fuzz corpus"
-
 	// DefaultReportName is the directory name where fuzzing results are
 	// stored.
 	DefaultReportName = "fuzz_results"
@@ -44,12 +34,28 @@ const (
 
 // Config holds the configuration parameters for the fuzzing setup.
 type Config struct {
-	ProjectSrcPath  string
-	GitStorageRepo  string
+	// ProjectSrcPath is the Git repository URL of the project to be fuzzed.
+	ProjectSrcPath string
+
+	// GitStorageRepo is the Git repository where the input corpus is
+	// stored.
+	GitStorageRepo string
+
+	// Path to store fuzzing results, relative to the current working
+	// directory
 	FuzzResultsPath string
-	FuzzPkgs        []string
-	FuzzTime        string
-	NumProcesses    int
+
+	// FuzzPkgs are the specific Go packages within the repository that will
+	// be fuzzed.
+	FuzzPkgs []string
+
+	// FuzzTime is the duration (in seconds) for which the fuzzing engine
+	// should run.
+	FuzzTime string
+
+	// NumProcesses specifies the number of fuzzing processes to run
+	// concurrently.
+	NumProcesses int
 }
 
 // LoadEnv loads environment variables from a .env file in the current
@@ -63,6 +69,7 @@ func LoadEnv() error {
 		return nil
 	}
 
+	// load environment variables from a .env file
 	if err := godotenv.Load(); err != nil {
 		return fmt.Errorf("failed to load .env file: %w", err)
 	}
@@ -74,15 +81,26 @@ func LoadEnv() error {
 // number,it will return that value (capped by the number of available CPUs).
 // Otherwise, it returns the number of CPUs available.
 func calculateProcessCount() int {
+	// Check for a user-specified value in FUZZ_NUM_PROCESSES
 	if envVal := os.Getenv("FUZZ_NUM_PROCESSES"); envVal != "" {
 		num, err := strconv.Atoi(envVal)
+
+		// Only accept valid, positive integers
 		if err == nil && num > 0 {
 			maxProcs := runtime.NumCPU()
+
+			// If the user asked for more processes than cores, cap
+			// it.
 			if num > maxProcs {
 				return maxProcs
 			}
+
+			// Otherwise, use the user’s requested count
 			return num
 		}
+
+		// If conversion failed or num <= 0, ignore and fall through to
+		// default
 	}
 
 	return runtime.NumCPU()
@@ -98,6 +116,7 @@ func LoadConfig() (*Config, error) {
 		FuzzTime:       DefaultFuzzTime,
 	}
 
+	// Validate required variables
 	if cfg.ProjectSrcPath == "" {
 		return nil, errors.New("PROJECT_SRC_PATH environment variable" +
 			" required")
@@ -107,15 +126,9 @@ func LoadConfig() (*Config, error) {
 			" required")
 	}
 
-	cfg.FuzzResultsPath = filepath.Join(
-		os.Getenv("FUZZ_RESULTS_PATH"), DefaultReportName,
-	)
-	err := os.MkdirAll(cfg.FuzzResultsPath, 0755)
-	if err != nil && !os.IsExist(err) {
-		return nil, fmt.Errorf("Failed to create directory: %w", err)
-	}
-
+	// Override default FuzzTime if user provided a value
 	if fuzzTimeStr := os.Getenv("FUZZ_TIME"); fuzzTimeStr != "" {
+		// parse as integer seconds
 		seconds, err := strconv.Atoi(fuzzTimeStr)
 		if err != nil {
 			return nil, fmt.Errorf("FUZZ_TIME environment "+
@@ -126,13 +139,22 @@ func LoadConfig() (*Config, error) {
 		cfg.FuzzTime = fmt.Sprintf("%ds", seconds)
 	}
 
+	// Determine how many concurrent fuzz processes to spawn
 	cfg.NumProcesses = calculateProcessCount()
 
+	// FUZZ_PKG is required: a space-separated list of package names
+	// (assumed to match their directory names)
 	fuzzPkgs := os.Getenv("FUZZ_PKG")
 	if fuzzPkgs == "" {
 		return nil, errors.New("FUZZ_PKG environment variable required")
 	}
-	cfg.FuzzPkgs = strings.Fields(fuzzPkgs)
+	cfg.FuzzPkgs = strings.Fields(fuzzPkgs) // split on whitespace
+
+	// Build the directory where fuzz reports (and logs) will be written
+	// FUZZ_RESULTS_PATH may itself come from an env var (can be empty)
+	cfg.FuzzResultsPath = filepath.Join(
+		os.Getenv("FUZZ_RESULTS_PATH"), DefaultReportName,
+	)
 
 	return cfg, nil
 }

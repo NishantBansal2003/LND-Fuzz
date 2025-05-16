@@ -1,4 +1,6 @@
 .env
-out/
+
 app
+
+out/
 fuzz_results/

@@ -1,13 +1,12 @@
-# Testing for "Continuous Fuzzing for LND"
+# Testing for "Go Continuous Fuzz"
 
 ## 1. Introduction
 
 Testing is a crucial part of the development process for the
-"Go-Continuous-Fuzz" project. This document outlines the
+"go-continuous-fuzz" project. This document outlines the
 various testing methods employed to ensure the reliability, performance, and
 correctness of the project. The methods include Automated Unit and Integration
-Testing. Each method is detailed below with examples and instructions on how to
-run the tests.
+Testing (not yet implemented). Each method is detailed below with examples and instructions on how to run the tests.
 
 ## 2. Automated Unit and Integration Testing
 
@@ -29,7 +28,7 @@ expected.
 Test coverage measures the amount of code being exercised by tests. We aim for
 good coverage to ensure robustness.
 
-The current test coverage in the code base is ~0%.
+The current test coverage in the codebase is ~18%.
 
 To generate the test coverage, use the following command:
 
