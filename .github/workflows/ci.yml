@@ -59,8 +59,8 @@ jobs:
       - name: Build the project
         run: make build
 
-  test:
-    name: Run Tests
+  unit-test:
+    name: Run Unit Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -77,4 +77,24 @@ jobs:
         run: go mod download
 
       - name: Run tests
-        run: make test
+        run: make unit-test
+
+  e2e-test:
+    name: Run E2E Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        id: setup
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.24.3"
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Run E2E tests
+        run: make e2e-test

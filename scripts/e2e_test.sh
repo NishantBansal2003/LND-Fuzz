@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Set environment variables
+ENV_FILE_NAME="./sample.env"
+VOLUME_MOUNTS_CMD="-v ./temp:/app/fuzz_results"
+
+# Create the temp directory if it doesn't exist
+mkdir -p ./temp
+
+# Run the make command with a 60-minute timeout
+timeout 60m make docker-run-file ENV_FILE="$ENV_FILE_NAME" VOLUME_MOUNTS="$VOLUME_MOUNTS_CMD"
+EXIT_STATUS=$?
+
+# Check the exit status of the timeout command
+if [ $EXIT_STATUS -ne 0 ]; then
+  echo "❌ The operation exited with status $EXIT_STATUS."
+fi
+
+# Check if the ./temp/fuzz_results directory exists
+if [ -d "./temp/fuzz_results" ]; then
+  echo "✅ Fuzzing process completed successfully."
+else
+  echo "❌ Fuzzing process failed."
+fi
+
+# Cleanup: Delete the ./temp directory
+rm -rf ./temp
