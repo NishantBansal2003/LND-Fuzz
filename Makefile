@@ -30,7 +30,7 @@ docker-run-file: docker
 	  exit 1; \
 	fi
 	@echo "Running $(DOCKER_APP_NAME) with env file '$(ENV_FILE)'"
-	docker run --env-file "$(ENV_FILE)" $(VOLUME_MOUNTS) "$(CONTAINER_NAME)" "$(DOCKER_APP_NAME)"
+	docker run --env-file "$(ENV_FILE)" $(VOLUME_MOUNTS) --name "$(CONTAINER_NAME)" "$(DOCKER_APP_NAME)"
 
 #? docker-run-env: Run the continuous-fuzz container with each required env var supplied on the command line or already exported in the shell.
 docker-run-env: docker
@@ -43,7 +43,7 @@ docker-run-env: docker
 	  --env FUZZ_PKG="$(FUZZ_PKG)" \
 	  --env FUZZ_RESULTS_PATH="$(FUZZ_RESULTS_PATH)" \
 	  $(VOLUME_MOUNTS) \
-	  $(CONTAINER_NAME) \
+	  --name $(CONTAINER_NAME) \
 	  "$(DOCKER_APP_NAME)"
 
 #? test: Run unit and integeration tests
