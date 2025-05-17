@@ -8,25 +8,11 @@ VOLUME_MOUNTS_CMD="-v ./temp:/app/fuzz_results"
 mkdir -p ./temp
 
 # Start the make command in the background
-make docker-run-file ENV_FILE="$ENV_FILE_NAME" VOLUME_MOUNTS="$VOLUME_MOUNTS_CMD" &
-MAKE_PID=$!
+# Run, interrupting the whole group after 10m with SIGINT
+timeout --signal=INT 10m \
+  make docker-run-file ENV_FILE="$ENV_FILE_NAME" VOLUME_MOUNTS="$VOLUME_MOUNTS_CMD"
 
-# After 60 minutes, send SIGINT (Ctrl+C) to the make process
-(
-  sleep 10m
-  echo "⏰ 60 minutes elapsed, sending SIGINT to make (PID $MAKE_PID)..."
-  kill -INT $MAKE_PID
-) &
-
-WAITER_PID=$!
-
-# Wait for the make command to finish
-wait $MAKE_PID
 EXIT_STATUS=$?
-
-# Kill the waiter if make finished early
-kill $WAITER_PID 2>/dev/null
-
 # Check the exit status of the make command
 if [ $EXIT_STATUS -ne 0 ]; then
   echo "❌ The operation exited with status $EXIT_STATUS."
