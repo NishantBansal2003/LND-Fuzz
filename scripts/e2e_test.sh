@@ -8,7 +8,7 @@ VOLUME_MOUNTS_CMD="-v ./temp:/app/fuzz_results"
 mkdir -p ./temp
 
 # Run the make command with a 60-minute timeout
-timeout 10m make docker-run-file ENV_FILE="$ENV_FILE_NAME" VOLUME_MOUNTS="$VOLUME_MOUNTS_CMD"
+timeout --kill-after=5m 10m make docker-run-file ENV_FILE="$ENV_FILE_NAME" VOLUME_MOUNTS="$VOLUME_MOUNTS_CMD"
 EXIT_STATUS=$?
 
 # If timeout triggered (124), reset to success
