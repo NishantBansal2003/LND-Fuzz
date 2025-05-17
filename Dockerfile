@@ -10,11 +10,11 @@ RUN apt-get update && \
 # Create a directory for cloning the repository.
 RUN mkdir /app
 
-# Clone the go-continuous-fuzz repo into the /app directory.
-RUN . /app
-
 # Change current working directory.
 WORKDIR /app
+
+# Clone the go-continuous-fuzz repo into the /app directory.
+RUN . .
 
 # Install Go modules.
 RUN go mod download

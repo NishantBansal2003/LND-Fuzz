@@ -14,6 +14,7 @@ EXIT_STATUS=$?
 # Check the exit status of the timeout command
 if [ $EXIT_STATUS -ne 0 ]; then
   echo "❌ The operation exited with status $EXIT_STATUS."
+  exit $EXIT_STATUS
 fi
 
 # Check if the ./temp/fuzz_results directory exists
@@ -21,6 +22,7 @@ if [ -d "./temp/fuzz_results" ]; then
   echo "✅ Fuzzing process completed successfully."
 else
   echo "❌ Fuzzing process failed."
+  exit 1
 fi
 
 # Cleanup: Delete the ./temp directory
