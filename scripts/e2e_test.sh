@@ -8,7 +8,7 @@ VOLUME_MOUNTS_CMD="-v ./temp:/app/fuzz_results"
 mkdir -p ./temp
 
 # Run the make command with a 60-minute timeout
-timeout -k 5m 10m make docker-run-file ENV_FILE="$ENV_FILE_NAME" VOLUME_MOUNTS="$VOLUME_MOUNTS_CMD"
+timeout 10m make docker-run-file ENV_FILE="$ENV_FILE_NAME" VOLUME_MOUNTS="$VOLUME_MOUNTS_CMD"
 EXIT_STATUS=$?
 
 # If timeout triggered (124), reset to success
@@ -23,6 +23,9 @@ if [ $EXIT_STATUS -ne 0 ]; then
   echo "❌ The operation exited with status $EXIT_STATUS."
   exit $EXIT_STATUS
 fi
+
+# Sleep for 5 minutes to allow the fuzzing process for cleanup
+sleep 5m
 
 # Check if the ./temp/fuzz_results directory exists
 if [ -d "./temp/fuzz_results" ]; then
