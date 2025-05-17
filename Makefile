@@ -2,6 +2,7 @@
 APP_NAME := app
 SRC := main.go
 DOCKER_APP_NAME := go-continuous-fuzz
+CONTAINER_NAME := continuous-fuzz-container
 
 #? build: Build the project and create app binary
 build:
@@ -29,7 +30,7 @@ docker-run-file: docker
 	  exit 1; \
 	fi
 	@echo "Running $(DOCKER_APP_NAME) with env file '$(ENV_FILE)'"
-	docker run --env-file "$(ENV_FILE)" $(VOLUME_MOUNTS) "$(DOCKER_APP_NAME)"
+	docker run --env-file "$(ENV_FILE)" $(VOLUME_MOUNTS) "$(CONTAINER_NAME)" "$(DOCKER_APP_NAME)"
 
 #? docker-run-env: Run the continuous-fuzz container with each required env var supplied on the command line or already exported in the shell.
 docker-run-env: docker
@@ -42,6 +43,7 @@ docker-run-env: docker
 	  --env FUZZ_PKG="$(FUZZ_PKG)" \
 	  --env FUZZ_RESULTS_PATH="$(FUZZ_RESULTS_PATH)" \
 	  $(VOLUME_MOUNTS) \
+	  $(CONTAINER_NAME) \
 	  "$(DOCKER_APP_NAME)"
 
 #? test: Run unit and integeration tests

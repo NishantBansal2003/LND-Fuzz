@@ -24,6 +24,9 @@ if [ $EXIT_STATUS -ne 0 ]; then
   exit $EXIT_STATUS
 fi
 
+# Stop the container
+docker stop continuous-fuzz-container
+
 # Sleep for 5 minutes to allow the fuzzing process for cleanup
 sleep 5m
 
