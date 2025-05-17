@@ -52,7 +52,7 @@ For more information, please refer to the project documentation.`
 // It uses a context with a timeout (DefaultCleanupTimeout) to limit the
 // duration of the cleanup operation. Any errors encountered during the removal
 // are logged.
-func cleanupWorkspace(logger *slog.Logger) {
+func CleanupWorkspace(logger *slog.Logger) {
 	_, cancel := context.WithTimeout(
 		context.Background(), DefaultCleanupTimeout,
 	)
@@ -66,26 +66,29 @@ func cleanupWorkspace(logger *slog.Logger) {
 // PerformCleanup handles post-cycle cleanup of the workspace and stores the
 // results. If storing of the corpus fails, it logs the error and terminates
 // the program.
-func PerformCleanup(logger *slog.Logger, cfg *Config) {
-	// Ensure that workspace cleanup is performed even if storing fails.
-	defer cleanupWorkspace(logger)
+// ! ISSUE HERE
+func PerformCleanup(logger *slog.Logger, cfg *Config, pkg string,
+	target string) {
 
-	corpusPath := filepath.Join(DefaultCorpusDir, "fuzzing")
+	corpusPath := filepath.Join(DefaultCorpusDir, pkg, "testdata", "fuzz",
+		target)
 	if _, err := os.Stat(corpusPath); os.IsNotExist(err) {
 		logger.Info("No corpus directory to output")
 
 		return
 	}
 
+	fuzzResultsPath := filepath.Join(cfg.FuzzResultsPath, pkg, "testdata",
+		"fuzz", target)
 	// Ensure the FuzzResultsPath directory exists (creates parents as
 	// needed)
-	if err := MayBeCreateFuzzResultsDir(cfg); err != nil {
+	if err := MayBeCreateFuzzResultsDir(fuzzResultsPath); err != nil {
 		logger.Error("Failed to create fuzz result file", "error", err)
 		os.Exit(1)
 	}
 
 	// Copy corpus to the results directory
-	if err := copy.Copy(corpusPath, cfg.FuzzResultsPath); err != nil {
+	if err := copy.Copy(corpusPath, fuzzResultsPath); err != nil {
 		logger.Error("Failed to copy corpus", "error", err)
 		os.Exit(1)
 	}
@@ -96,9 +99,9 @@ func PerformCleanup(logger *slog.Logger, cfg *Config) {
 // MayBeCreateFuzzResultsDir ensures that the directory specified by
 // cfg.FuzzResultsPath exists, creating it along with any necessary parent
 // directories if they do not already exist.
-func MayBeCreateFuzzResultsDir(cfg *Config) error {
+func MayBeCreateFuzzResultsDir(fuzzResultsPath string) error {
 	// Ensure the directory exists (creates parents as needed)
-	err := os.MkdirAll(cfg.FuzzResultsPath, 0755)
+	err := os.MkdirAll(fuzzResultsPath, 0755)
 	if err != nil && !os.IsExist(err) {
 		return fmt.Errorf("Failed to create directory: %w", err)
 	}

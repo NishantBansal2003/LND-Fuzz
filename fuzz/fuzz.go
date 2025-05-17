@@ -239,6 +239,7 @@ func executeFuzzTarget(ctx context.Context, logger *slog.Logger, pkg string,
 	logger.Info("Fuzzing completed successfully", "package", pkg,
 		"target", target,
 	)
+	config.PerformCleanup(logger, cfg, pkg, target)
 
 	return nil
 }
