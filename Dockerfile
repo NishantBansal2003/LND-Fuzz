@@ -13,8 +13,8 @@ RUN mkdir /app
 # Change current working directory.
 WORKDIR /app
 
-# Clone the go-continuous-fuzz repo into the /app directory.
-RUN . .
+# Copy the go-continuous-fuzz repo into the /app directory.
+COPY . .
 
 # Install Go modules.
 RUN go mod download
