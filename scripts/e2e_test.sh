@@ -13,7 +13,7 @@ MAKE_PID=$!
 
 # After 60 minutes, send SIGINT (Ctrl+C) to the make process
 (
-  sleep 60m
+  sleep 10m
   echo "⏰ 60 minutes elapsed, sending SIGINT to make (PID $MAKE_PID)..."
   kill -INT $MAKE_PID
 ) &
