@@ -25,46 +25,56 @@ func RunFuzzing(ctx context.Context, logger *slog.Logger,
 
 	// Create an errgroup that shares this context. Any error or
 	// cancellation will cancel all in-flight fuzz runs.
-	g, ctx := errgroup.WithContext(ctx)
+	g, goCtx := errgroup.WithContext(ctx)
 
 	// Loop over each package the user requested fuzzing for.
 	for _, pkg := range cfg.FuzzPkgs {
-		// Before starting work, check if we've been asked to stop.
-		select {
-		case <-ctx.Done():
-			// Context canceled: stop processing further packages.
-			return nil
-		default:
-			// Context still active: proceed to list and run fuzz
-			// targets.
-		}
+		pkg := pkg // capture loop variable
 
-		// Discover all fuzz targets in this package (pkg)
-		targets, err := listFuzzTargets(ctx, logger, pkg)
-		if err != nil {
-			return fmt.Errorf("failed to list targets for"+
-				" package %q: %w", pkg, err)
-		}
-
-		for _, target := range targets {
-			// Capture loop variables for closure
-			pkg := pkg
-			target := target
-
-			// Launch each fuzz target in a separate goroutine.
-			// If an error other than a fuzz target failure occurs
-			// during execution, it is returned and will cause the
-			// errgroup to cancel all other running goroutines.
-			g.Go(func() error {
-				if err := executeFuzzTarget(ctx, logger,
-					pkg, target, cfg); err != nil {
-					return fmt.Errorf("fuzzing "+
-						"failed for %q/%q: %w",
-						pkg, target, err)
-				}
+		// Run fuzzing for each package in a separate goroutine.
+		g.Go(func() error {
+			// Before starting work, check if we've been asked to
+			// stop.
+			select {
+			case <-ctx.Done():
+				// Context canceled: stop processing further
+				// packages.
 				return nil
-			})
-		}
+			default:
+				// Context still active: proceed to list and run
+				// fuzz targets.
+			}
+
+			// Discover all fuzz targets in this package (pkg)
+			targets, err := listFuzzTargets(goCtx, logger, pkg)
+			if err != nil {
+				return fmt.Errorf("failed to list targets for"+
+					" package %q: %w", pkg, err)
+			}
+
+			for _, target := range targets {
+				// Capture loop variables for closure
+				pkg := pkg
+				target := target
+
+				// Launch each fuzz target in a separate
+				// goroutine. If an error other than a fuzz
+				// target failure occurs during execution, it is
+				// returned and will cause the errgroup to
+				// cancel all other running goroutines.
+				g.Go(func() error {
+					if err := executeFuzzTarget(goCtx,
+						logger, pkg, target,
+						cfg); err != nil {
+						return fmt.Errorf("fuzzing "+
+							"failed for %q/%q: %w",
+							pkg, target, err)
+					}
+					return nil
+				})
+			}
+			return nil
+		})
 	}
 
 	// Wait for all fuzz target executions to finish or any to error/cancel.
@@ -100,8 +110,9 @@ func listFuzzTargets(ctx context.Context, logger *slog.Logger,
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	// Execute the command and check for errors.
-	if err := cmd.Run(); err != nil {
+	// Execute the command and check for errors, when the context wasn't
+	// canceled.
+	if err := cmd.Run(); err != nil && ctx.Err() == nil {
 		return nil, fmt.Errorf("go test failed for %q: %w (output: %q)",
 			pkg, err, strings.TrimSpace(stderr.String()))
 	}
@@ -189,8 +200,9 @@ func executeFuzzTarget(ctx context.Context, logger *slog.Logger, pkg string,
 
 	// Stream and process the standard output of 'go test', which may
 	// include both stdout and stderr content.
-	go streamFuzzOutput(logger.With("target", target), &wg, stdout,
-		maybeFailingCorpusPath, cfg, target, fuzzTargetFailingChan)
+	go streamFuzzOutput(logger.With("target", target).With("package", pkg),
+		&wg, stdout, maybeFailingCorpusPath, cfg, target,
+		fuzzTargetFailingChan)
 
 	// Wait for the output streaming to complete.
 	wg.Wait()

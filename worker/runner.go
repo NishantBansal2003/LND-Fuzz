@@ -13,7 +13,13 @@ import (
 // Main handles the cloning of repositories and the execution of fuzz testing.
 // It ensures that any errors encountered during these processes are logged and
 // that the workspace is cleaned up appropriately before the program exits.
-func Main(ctx context.Context, logger *slog.Logger, cfg *config.Config) {
+func Main(ctx context.Context, logger *slog.Logger, cfg *config.Config,
+	doneChan chan struct{}) {
+
+	// Close the channel to indicate that the fuzzing cycle has completed,
+	// so that the scheduler can perform cleanup.
+	defer close(doneChan)
+
 	// Clone the project and storage repositories based on the loaded
 	// configuration.
 	if err := git.CloneRepositories(ctx, logger, cfg); err != nil {

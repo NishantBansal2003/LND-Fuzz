@@ -30,8 +30,11 @@ func RunFuzzingCycles(ctx context.Context, logger *slog.Logger, cfg *config.
 		// Create a sub-context for the current fuzzing cycle.
 		cycleCtx, cancelCycle := context.WithCancel(ctx)
 
+		// Channel to check if the cycle is cancelled, before cleanup.
+		doneChan := make(chan struct{})
+
 		// Start the fuzzing worker concurrently.
-		go runFuzzingWorker(cycleCtx, logger, cfg)
+		go runFuzzingWorker(cycleCtx, logger, cfg, doneChan)
 
 		// Wait for either the cycle duration to elapse or the overall
 		// context to cancel.
@@ -43,10 +46,11 @@ func RunFuzzingCycles(ctx context.Context, logger *slog.Logger, cfg *config.
 			// Cancel the current cycle.
 			cancelCycle()
 
-			// Give a buffer time for routines to exit gracefully.
-			time.Sleep(5 * time.Second)
-
+			// wait before the fuzzing worker is closed before
+			// cleanup.
+			<-doneChan
 			config.PerformCleanup(logger, cfg)
+
 		case <-ctx.Done():
 			logger.Info("Shutdown initiated during fuzzing " +
 				"cycle; performing final cleanup.")
@@ -54,10 +58,11 @@ func RunFuzzingCycles(ctx context.Context, logger *slog.Logger, cfg *config.
 			// Overall application context canceled.
 			cancelCycle()
 
-			// Buffer time before cleanup.
-			time.Sleep(5 * time.Second)
-
+			// wait before the fuzzing worker is closed before
+			// cleanup.
+			<-doneChan
 			config.PerformCleanup(logger, cfg)
+
 			return
 		}
 	}
@@ -66,7 +71,7 @@ func RunFuzzingCycles(ctx context.Context, logger *slog.Logger, cfg *config.
 // runFuzzingWorker executes the fuzzing work until the cycle context is
 // canceled. It repeatedly calls the main fuzzing function from the app package.
 func runFuzzingWorker(ctx context.Context, logger *slog.Logger, cfg *config.
-	Config) {
+	Config, doneChan chan struct{}) {
 
 	logger.Info("Starting fuzzing worker", "startTime", time.Now().
 		Format(time.RFC1123))
@@ -78,6 +83,6 @@ func runFuzzingWorker(ctx context.Context, logger *slog.Logger, cfg *config.
 		return
 	default:
 		// Execute the main fuzzing operation.
-		worker.Main(ctx, logger, cfg)
+		worker.Main(ctx, logger, cfg, doneChan)
 	}
 }
