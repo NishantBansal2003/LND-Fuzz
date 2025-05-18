@@ -112,7 +112,7 @@ func listFuzzTargets(ctx context.Context, logger *slog.Logger,
 
 	// Execute the command and check for errors, when the context wasn't
 	// canceled.
-	if err := cmd.Run(); err != nil && ctx.Err() == nil {
+	if err := cmd.Run(); err != nil && !errors.Is(err, context.Canceled) {
 		return nil, fmt.Errorf("go test failed for %q: %w (output: %q)",
 			pkg, err, strings.TrimSpace(stderr.String()))
 	}
@@ -217,7 +217,7 @@ func executeFuzzTarget(ctx context.Context, logger *slog.Logger, pkg string,
 	// (i.e., no failure was detected during fuzzing), and the command
 	// execution resulted in an error, and the context wasn't canceled.
 	if err != nil {
-		if ctx.Err() == nil && !isFailing {
+		if !errors.Is(err, context.Canceled) && !isFailing {
 			return fmt.Errorf("fuzz execution failed: %w", err)
 		}
 	}
