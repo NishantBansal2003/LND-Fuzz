@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -17,9 +16,6 @@ const (
 	// DefaultFuzzTime specifies the default duration for fuzzing if not
 	// overridden by environment variables.
 	DefaultFuzzTime = "120s"
-
-	// DefaultCleanupTimeout is the timeout used for cleanup operations.
-	DefaultCleanupTimeout = 5 * time.Second
 
 	// DefaultCorpusDir is the directory where the fuzzing corpus is stored.
 	DefaultCorpusDir = "out/corpus"

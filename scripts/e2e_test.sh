@@ -1,18 +1,11 @@
 #!/bin/bash
 
 # Run the make command with a 60-minute timeout
-timeout 10m make run
+timeout 60m make run
 EXIT_STATUS=$?
 
-# If timeout triggered (124), reset to success
-if [ $EXIT_STATUS -eq 124 ]; then
-  echo "⏰ Timeout reached after 60m—continuing as success."
-  EXIT_STATUS=0
-fi
-
-# Check the exit status of the make command
-# Report any genuine failures
-if [ $EXIT_STATUS -ne 0 ]; then
+# If make run failed (not timeout), exit with error
+if [ $EXIT_STATUS -ne 0 ] && [ $EXIT_STATUS -ne 124 ]; then
   echo "❌ The operation exited with status $EXIT_STATUS."
   exit $EXIT_STATUS
 fi
