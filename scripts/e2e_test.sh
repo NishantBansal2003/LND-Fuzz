@@ -17,9 +17,6 @@ if [ $EXIT_STATUS -ne 0 ]; then
   exit $EXIT_STATUS
 fi
 
-# Sleep for 5 minutes to allow the fuzzing process for cleanup
-sleep 5m
-
 # Check if the ./fuzz_results directory exists
 if [ -d "./fuzz_results" ]; then
   echo "✅ Fuzzing process completed successfully."

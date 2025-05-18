@@ -72,7 +72,7 @@ make docker-run-env \
 
 ### Step 7: Run the Test Cases
 
-1. Run the following command to execute the test cases (both unit and integeration tests):
+1. Run the following command to execute the test cases (both unit and integration tests):
 
 ```sh
 make test

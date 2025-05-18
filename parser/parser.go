@@ -146,7 +146,7 @@ func (fp *FuzzProcessor) handleFailureDetection(line string) error {
 
 		// Ensure the FuzzResultsPath directory exists (creates parents
 		// as needed)
-		if err := config.MayBeCreateFuzzResultsDir(
+		if err := config.EnsureDirExists(
 			fp.cfg.FuzzResultsPath); err != nil {
 			return fmt.Errorf("failed to create fuzz result file: "+
 				"%w", err)
