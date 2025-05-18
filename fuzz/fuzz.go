@@ -3,7 +3,7 @@ package fuzz
 import (
 	"bytes"
 	"context"
- "errors"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -216,9 +216,12 @@ func executeFuzzTarget(ctx context.Context, logger *slog.Logger, pkg string,
 
 	// Proceed to return an error only if the fuzz target did not fail
 	// (i.e., no failure was detected during fuzzing), and the command
-	// execution resulted in an error, and the context wasn't canceled.
+	// execution resulted in an error, and the error is not due to a
+	// cancellation of the context.
 	if err != nil {
-		if !errors.Is(err, context.Canceled) && !isFailing {
+		if ee, ok := err.(*exec.ExitError); (!ok || ee.ProcessState.
+			ExitCode() != 1) && !isFailing {
+
 			return fmt.Errorf("fuzz execution failed: %w", err)
 		}
 	}
