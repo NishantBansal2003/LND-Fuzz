@@ -9,7 +9,7 @@ export FUZZ_TIME="3600"
 export FUZZ_PKG="macaroons routing watchtower/wtclient watchtower/wtwire zpay32"
 
 # Run the make command with a 60-minute timeout
-timeout -s INT --preserve-status 10m make run
+timeout -s INT --preserve-status 60m make run
 EXIT_STATUS=$?
 
 # If make run failed (not timeout), exit with error
