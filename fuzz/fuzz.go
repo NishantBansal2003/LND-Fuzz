@@ -3,6 +3,7 @@ package fuzz
 import (
 	"bytes"
 	"context"
+ "errors"
 	"fmt"
 	"io"
 	"log/slog"
