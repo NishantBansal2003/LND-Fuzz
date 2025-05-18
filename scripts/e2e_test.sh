@@ -13,7 +13,7 @@ timeout -s INT --preserve-status 10m make run
 EXIT_STATUS=$?
 
 # If make run failed (not timeout), exit with error
-if [ $EXIT_STATUS -ne 0 ] && [ $EXIT_STATUS -ne 143 ]; then
+if [ $EXIT_STATUS -ne 0 ] && [ $EXIT_STATUS -ne 130 ]; then
   echo "❌ The operation exited with status $EXIT_STATUS."
   exit $EXIT_STATUS
 fi

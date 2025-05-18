@@ -67,6 +67,20 @@ func RunFuzzing(ctx context.Context, logger *slog.Logger,
 				// returned and will cause the errgroup to
 				// cancel all other running goroutines.
 				g.Go(func() error {
+					select {
+					case <-ctx.Done():
+						// Context canceled: stop
+						// processing further packages.
+						return nil
+					case <-goCtx.Done():
+						// error already encountered:
+						// stop processing further
+						return nil
+					default:
+						// Context still active: proceed
+						// to list and run fuzz targets.
+					}
+
 					if err := executeFuzzTarget(goCtx,
 						logger, pkg, target,
 						cfg); err != nil {
@@ -192,7 +206,7 @@ func executeFuzzTarget(ctx context.Context, logger *slog.Logger, pkg string,
 	}
 
 	// Start the execution of the 'go test' command.
-	if err := cmd.Start(); err != nil {
+	if err := cmd.Start(); err != nil && ctx.Err() == nil {
 		return fmt.Errorf("command start failed: %w", err)
 	}
 
