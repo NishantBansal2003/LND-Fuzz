@@ -18,6 +18,8 @@ if [ $EXIT_STATUS -ne 0 ] && [ $EXIT_STATUS -ne 124 ]; then
   exit $EXIT_STATUS
 fi
 
+sleep 5m
+
 # Check if the ./fuzz_results directory exists
 if [ -d "./fuzz_results" ]; then
   echo "✅ Fuzzing process completed successfully."
