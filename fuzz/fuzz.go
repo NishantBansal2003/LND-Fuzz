@@ -3,7 +3,6 @@ package fuzz
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -40,6 +39,10 @@ func RunFuzzing(ctx context.Context, logger *slog.Logger,
 			case <-ctx.Done():
 				// Context canceled: stop processing further
 				// packages.
+				return nil
+			case <-goCtx.Done():
+				// error already encountered: stop processing
+				// further
 				return nil
 			default:
 				// Context still active: proceed to list and run
@@ -113,7 +116,7 @@ func listFuzzTargets(ctx context.Context, logger *slog.Logger,
 
 	// Execute the command and check for errors, when the context wasn't
 	// canceled.
-	if err := cmd.Run(); err != nil && !errors.Is(err, context.Canceled) {
+	if err := cmd.Run(); err != nil && ctx.Err() == nil {
 		return nil, fmt.Errorf("go test failed for %q: %w (output: %q)",
 			pkg, err, strings.TrimSpace(stderr.String()))
 	}
@@ -219,9 +222,7 @@ func executeFuzzTarget(ctx context.Context, logger *slog.Logger, pkg string,
 	// execution resulted in an error, and the error is not due to a
 	// cancellation of the context.
 	if err != nil {
-		if ee, ok := err.(*exec.ExitError); (!ok || ee.ProcessState.
-			ExitCode() != 1) && !isFailing {
-
+		if ctx.Err() == nil && !isFailing {
 			return fmt.Errorf("fuzz execution failed: %w", err)
 		}
 	}
