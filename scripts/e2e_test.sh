@@ -1,5 +1,13 @@
 #!/bin/bash
 
+set -x
+
+# Specify the environment variables for the fuzzing process
+export PROJECT_SRC_PATH="https://github.com/lightningnetwork/lnd.git"
+export GIT_STORAGE_REPO="https://github.com/lightninglabs/lnd-fuzz.git"
+export FUZZ_TIME="3600"
+export FUZZ_PKG="macaroons routing watchtower/wtclient watchtower/wtwire zpay32"
+
 # Run the make command with a 60-minute timeout
 timeout 60m make run
 EXIT_STATUS=$?
