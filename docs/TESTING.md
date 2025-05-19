@@ -6,7 +6,7 @@ Testing is a crucial part of the development process for the
 "go-continuous-fuzz" project. This document outlines the
 various testing methods employed to ensure the reliability, performance, and
 correctness of the project. The methods include Automated Unit and Integration
-Testing (not yet implemented). Each method is detailed below with examples and instructions on how to run the tests.
+Testing. Each method is detailed below with examples and instructions on how to run the tests.
 
 ## 2. Automated Unit and Integration Testing
 

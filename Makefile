@@ -44,9 +44,16 @@ docker-run-env: docker
 	  $(VOLUME_MOUNTS) \
 	  "$(DOCKER_APP_NAME)"
 
-#? test: Run tests with verbose output
-test:
+#? test: Run unit and integration tests
+test: unit-test e2e-test
+
+#? unit-test: Run unit tests with verbose output
+unit-test:
 	go test ./... -v
+
+#? e2e-test: Run e2e(integration) tests
+e2e-test:
+	./scripts/e2e_test.sh
 
 #? cover: Generate the test coverage
 cover:
