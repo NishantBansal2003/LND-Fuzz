@@ -67,6 +67,8 @@ func RunFuzzing(ctx context.Context, logger *slog.Logger,
 				// returned and will cause the errgroup to
 				// cancel all other running goroutines.
 				g.Go(func() error {
+					// Before starting work, check if we've
+					// been asked to stop.
 					select {
 					case <-ctx.Done():
 						// Context canceled: stop

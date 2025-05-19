@@ -5,14 +5,14 @@ set -x
 # Specify the environment variables for the fuzzing process
 export PROJECT_SRC_PATH="https://github.com/lightningnetwork/lnd.git"
 export GIT_STORAGE_REPO="https://github.com/lightninglabs/lnd-fuzz.git"
-export FUZZ_TIME="1800"
+export FUZZ_TIME="1700"
 export FUZZ_PKG="macaroons routing watchtower/wtclient watchtower/wtwire zpay32"
 
 # Run the make command with a 30-minute timeout
 timeout -s INT --preserve-status 30m make run
 EXIT_STATUS=$?
 
-# If make run failed (not timeout), exit with error
+# If make run failed (not timeout and SIGINT), exit with error
 if [ $EXIT_STATUS -ne 0 ] && [ $EXIT_STATUS -ne 130 ]; then
   echo "❌ The operation exited with status $EXIT_STATUS."
   exit $EXIT_STATUS
